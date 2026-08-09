@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -)",
+      "Bash(grep -n \"&1519568415$\" -A 18 Assets/Scenes/SampleScene.unity)",
+      "Bash(grep -n \"&1519568414$\" -A 12 Assets/Scenes/SampleScene.unity)"
+    ]
+  }
+}

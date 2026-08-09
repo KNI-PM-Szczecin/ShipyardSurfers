@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using UnityEngine;
 
@@ -37,6 +38,8 @@ public class GameManager : MonoBehaviour
         SegmentMover.MoveSpeed = StartGameSpeed;
         _currentSpeed = StartGameSpeed;
         _lastSpeedChange = Time.time;
+
+        EventBus.DeathEvent += StopGame;
     }
 
     void Update()
@@ -52,5 +55,17 @@ public class GameManager : MonoBehaviour
     private void FixedUpdate()
     {
         Score.Value += SCORE_ITERATOR_VALUE * _currentSpeed;
+    }
+
+    private void StopGame(System.Object o, EventArgs e)
+    {
+        _currentSpeed = 0f;
+        SegmentMover.MoveSpeed = 0;
+        GameSpeedMultiplayer = 0f;
+    }
+
+    private void OnDestroy()
+    {
+        EventBus.DeathEvent -= StopGame;
     }
 }

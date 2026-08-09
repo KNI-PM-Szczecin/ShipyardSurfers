@@ -1,27 +1,46 @@
+using System;
 using TMPro;
 using UnityEngine;
 
 public class GameUIManager : MonoBehaviour
 {
-    public TMP_Text Text;
+    [Header("Gameplay")]
+    public TMP_Text ScoreText;
+    [Space]
+    [Header("EndScreen")]
+    public GameObject EndScreen;
+    public GameObject GameplayPanel;
 
     void Start()
     {
-        if (Text != null)
+        if (ScoreText != null)
         {
-            Text.text = "0";
+            ScoreText.text = "0";
         }else
         {
             print("WARNING: Score text in GameUIManager is empty!");
         }
 
         GameManager.instance.Score.Subscribe(UpdateScore);
+        EventBus.DeathEvent += ShowDeathScreen;
     }
 
     public void UpdateScore(float score)
     {
-        if (Text == null) { return; }
+        if (ScoreText == null) { return; }
 
-        Text.text = ((int)score).ToString();
+        ScoreText.text = ((int)score).ToString();
+    }
+
+    public void ShowDeathScreen(System.Object o, EventArgs e)
+    {
+        EndScreen.SetActive(true);
+        GameplayPanel.SetActive(false);
+    }
+
+    public void OnDisable()
+    {
+        GameManager.instance.Score.Unsubscribe(UpdateScore);
+        EventBus.DeathEvent -= ShowDeathScreen;
     }
 }

@@ -31,10 +31,17 @@ public class MovmentController : MonoBehaviour
     [Space]
     [Header("RampsHandling")]
     [SerializeField] private LayerMask _playerMask;
+    [SerializeField] private LayerMask _obsticleMask = 1 << 6;
     [SerializeField] private float _rayStartHeight = 1f;
     [SerializeField] private float _stepTolerance = 0.05f;
+    [SerializeField] private float _sideCollisionDistance = 0.4f;
+
+    private const float TrackSnapEpsilon = 0.1f;
 
     private bool _trackChangeLock = false;
+    private bool _bounceLock = false;
+    private bool _lastChangeIncrement = false;
+    private bool _isDead = false;
     private float _trackChangeTime = 0;
     private bool _rollLock = false;
     private float _rollTime = 0;
@@ -66,10 +73,9 @@ public class MovmentController : MonoBehaviour
     {
         Vector2 moveState = _moveAction.ReadValue<Vector2>();
 
-        if (moveState.x != 0 && !_trackChangeLock ||
-            moveState.x != 0 && _trackChangeLock && _trackChangeTime + _trackChangeDuration < Time.time)
+        if (moveState.x != 0 && !_trackChangeLock)
         {
-            changeTrack(moveState.x > 0 ? true : false, _trackChangeDuration);
+            changeTrack(moveState.x > 0, _trackChangeDuration);
         }
 
         if (moveState.y > 0 && canJump())
@@ -89,7 +95,7 @@ public class MovmentController : MonoBehaviour
             {
                 float dy = groundY - transform.position.y;
 
-                if (dy >= -_stepTolerance)         
+                if (dy >= -_stepTolerance)
                 {
                     if (_fallCoroutine != null) { StopCoroutine(_fallCoroutine); _fallCoroutine = null; }
                     SetY(groundY);
@@ -106,40 +112,95 @@ public class MovmentController : MonoBehaviour
         }
     }
 
-    // hitting a wall from a side will be detected via trigger so it doesn't have to be handled here at all
-    private void changeTrack(bool increment, float duration)
+    private void changeTrack(bool increment, float duration, bool isBounce = false)
     {
-        if (_trackChangeCoroutine != null)
+        if (_isDead) return;
+
+        int targetTrack = isBounce
+            ? findNeighbouringTrack(transform.position.x, increment)
+            : (increment ? _activeTrack + 1 : _activeTrack - 1);
+
+        if (targetTrack > _trackTransforms.Length - 1 || targetTrack < 0)
         {
-            StopCoroutine(_trackChangeCoroutine);
+            HandleDoubleSideHit(targetTrack);
+            return;
         }
 
+        if (_trackChangeCoroutine != null) StopCoroutine(_trackChangeCoroutine);
+
+        _activeTrack = targetTrack;
         _trackChangeTime = Time.time;
         _trackChangeLock = true;
-        _activeTrack = increment ? ++_activeTrack : --_activeTrack;
+        _lastChangeIncrement = increment;
+        if (!isBounce) _bounceLock = false;
+
         _trackChangeCoroutine = StartCoroutine(
-            changeTrackAsync(_trackTransforms[_activeTrack].position.x, duration));
+            changeTrackAsync(_trackTransforms[_activeTrack].position.x, duration, isBounce));
     }
 
     private void OnWallHit(bool increment)
     {
-        changeTrack(increment, _wallBounceDuration);
+        if (_isDead) return;
+
+        if (_trackChangeLock && increment == _lastChangeIncrement) return;
+
+        if (_bounceLock)
+        {
+            Die();
+            return;
+        }
+
+        _bounceLock = true;
+        changeTrack(increment, _wallBounceDuration, true);
     }
 
-    private IEnumerator changeTrackAsync(float x, float duration)
+    private int findNeighbouringTrack(float x, bool increment)
+    {
+        int closest = increment ? _trackTransforms.Length : -1;
+        float closestDistance = float.MaxValue;
+
+        for (int i = 0; i < _trackTransforms.Length; i++)
+        {
+            float delta = _trackTransforms[i].position.x - x;
+            if (increment ? delta <= TrackSnapEpsilon : delta >= -TrackSnapEpsilon) continue;
+
+            float distance = Mathf.Abs(delta);
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closest = i;
+            }
+        }
+
+        return closest;
+    }
+
+    private IEnumerator changeTrackAsync(float x, float duration, bool isBounce)
     {
         float elapsed = 0;
         float startX = transform.position.x;
+        float direction = x > startX ? 1f : -1f;
+
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
             float newX = Mathf.Lerp(startX, x, elapsed / duration);
+            Vector3 origin = transform.position + Vector3.up * _rayStartHeight;
+
+            if (Physics.Raycast(origin, Vector3.right * direction, out RaycastHit hit,
+                   _sideCollisionDistance, _obsticleMask, QueryTriggerInteraction.Ignore))
+            {
+                Die();
+                yield break;
+            }
+
             transform.position = new Vector3(newX, transform.position.y, transform.position.z);
 
             yield return null;
         }
 
         _trackChangeLock = false;
+        if (isBounce) _bounceLock = false;
         _trackChangeCoroutine = null;
     }
 
@@ -230,6 +291,28 @@ public class MovmentController : MonoBehaviour
         }
         groundY = 0f;
         return false;
+    }
+
+    private void HandleDoubleSideHit(int targetTrack)
+    {
+        int trackId = targetTrack < 0 ? 1 : _trackTransforms.Length - 2;
+        transform.position = new Vector3(_trackTransforms[trackId].position.x, _initialY, _trackTransforms[trackId].position.z);
+        Die();
+    }
+
+    private void Die()
+    {
+        if (_isDead) return;
+
+        _isDead = true;
+        StopAllCoroutines();
+        _trackChangeCoroutine = null;
+        _jumpCoroutine = null;
+        _fallCoroutine = null;
+        _rollCoroutine = null;
+
+        EventBus.PlayerDeath();
+        this.enabled = false;
     }
 
     private void OnDestroy()
