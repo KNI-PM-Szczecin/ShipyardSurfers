@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb71eed7db3cbc44fa436090facda945, type: 3}
+  m_Name: TrackApperence1
+  m_EditorClassIdentifier: Assembly-CSharp::TrackApperenceSO
+  Track: {fileID: 0}
+  JumpPrefab: {fileID: 6038716541670328967, guid: 640254ab9d0413a46a15217c5b51ae20, type: 3}
+  SlidePrefab: {fileID: 8494139213906352956, guid: 74bdea3237657be468cf6b12d72bd6fb, type: 3}
+  BlockadePrefab: {fileID: 4613561068087905962, guid: fae72907d72a1af46bda80cdd1c8ac97, type: 3}
+  RampPrefab: {fileID: 2827869805090508491, guid: 9f90736bf6368354b8989cf5737f6947, type: 3}
