@@ -7,8 +7,6 @@ using UnityEngine.Splines.Interpolators;
 
 public class MovmentController : MonoBehaviour
 {
-    static public Action<bool> WallHitAction;
-
     [Header("Track placement")]
     [SerializeField] private Transform[] _trackTransforms;
     private int _activeTrack;
@@ -42,9 +40,7 @@ public class MovmentController : MonoBehaviour
     private bool _bounceLock = false;
     private bool _lastChangeIncrement = false;
     private bool _isDead = false;
-    private float _trackChangeTime = 0;
     private bool _rollLock = false;
-    private float _rollTime = 0;
     private float _initialY;
 
     private Coroutine _trackChangeCoroutine = null;
@@ -64,12 +60,12 @@ public class MovmentController : MonoBehaviour
         _activeTrack = middleTrackIndex;
 
         _moveAction = InputSystem.actions.FindAction("Move");
-        WallHitAction += OnWallHit;
+        EventBus.WallSideHitEvent += OnSideWallHit;
+        EventBus.WallFrontHitEvent += OnFrontWallHit;
         _initialY = transform.position.y;
     }
 
-
-    void Update()
+    void FixedUpdate()
     {
         Vector2 moveState = _moveAction.ReadValue<Vector2>();
 
@@ -129,7 +125,6 @@ public class MovmentController : MonoBehaviour
         if (_trackChangeCoroutine != null) StopCoroutine(_trackChangeCoroutine);
 
         _activeTrack = targetTrack;
-        _trackChangeTime = Time.time;
         _trackChangeLock = true;
         _lastChangeIncrement = increment;
         if (!isBounce) _bounceLock = false;
@@ -138,7 +133,7 @@ public class MovmentController : MonoBehaviour
             changeTrackAsync(_trackTransforms[_activeTrack].position.x, duration, isBounce));
     }
 
-    private void OnWallHit(bool increment)
+    private void OnSideWallHit(object o, bool increment)
     {
         if (_isDead) return;
 
@@ -152,6 +147,11 @@ public class MovmentController : MonoBehaviour
 
         _bounceLock = true;
         changeTrack(increment, _wallBounceDuration, true);
+    }
+
+    private void OnFrontWallHit(object o, EventArgs e)
+    {
+        Die();
     }
 
     private int findNeighbouringTrack(float x, bool increment)
@@ -232,7 +232,6 @@ public class MovmentController : MonoBehaviour
     {
         if (_rollLock) return;
 
-        _rollTime = Time.time;
         _rollLock = true;
 
         if (_jumpCoroutine != null)
@@ -281,14 +280,17 @@ public class MovmentController : MonoBehaviour
         transform.position = new Vector3(transform.position.x, y, transform.position.z);
 
     private bool TryGetGroundY(out float groundY)
-    {
-        Vector3 origin = transform.position + Vector3.up * _rayStartHeight;
-        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit,
-                            _rayStartHeight + _rayLength, ~_playerMask))
+    { 
+        Vector3 origin = transform.position + Vector3.up * _rayStartHeight + Vector3.forward;
+        float capsuleRadius = 0.5f;
+
+        if (Physics.SphereCast(origin, capsuleRadius, Vector3.down, out RaycastHit hit,
+                               _rayStartHeight + _rayLength, ~_playerMask))
         {
-            groundY = hit.point.y+1;
+            groundY = hit.point.y + 1f;
             return true;
         }
+
         groundY = 0f;
         return false;
     }
@@ -317,6 +319,7 @@ public class MovmentController : MonoBehaviour
 
     private void OnDestroy()
     {
-        WallHitAction-= OnWallHit;
+        EventBus.WallSideHitEvent -= OnSideWallHit;
+        EventBus.WallFrontHitEvent -= OnFrontWallHit;
     }
 }

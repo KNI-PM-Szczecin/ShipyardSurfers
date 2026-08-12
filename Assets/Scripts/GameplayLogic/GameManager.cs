@@ -42,19 +42,16 @@ public class GameManager : MonoBehaviour
         EventBus.DeathEvent += StopGame;
     }
 
-    void Update()
+    private void FixedUpdate()
     {
         if (_lastSpeedChange + SPEED_CHANGE_INTERVAL > Time.time) { return; }
-        if (_currentSpeed >  MaxGameSpeed) { return; }
+        if (_currentSpeed > MaxGameSpeed) { return; }
 
         _currentSpeed = _currentSpeed * GameSpeedMultiplayer;
         SegmentMover.MoveSpeed = _currentSpeed;
         _lastSpeedChange = Time.time;
-    }
 
-    private void FixedUpdate()
-    {
-        Score.Value += SCORE_ITERATOR_VALUE * _currentSpeed;
+        Score.Value += SCORE_ITERATOR_VALUE * _currentSpeed * Time.fixedDeltaTime / 3;
     }
 
     private void StopGame(System.Object o, EventArgs e)

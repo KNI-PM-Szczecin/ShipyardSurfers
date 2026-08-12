@@ -1,14 +1,12 @@
 using UnityEngine;
 
-public class SideWallCollisionDetector : MonoBehaviour
+public class FrontWallCollisionDetector : MonoBehaviour
 {
-    public bool IsOnRight;
-
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
         {
-            EventBus.WallSideHit(IsOnRight);
+            EventBus.FrontWallHit();
         }
     }
 }

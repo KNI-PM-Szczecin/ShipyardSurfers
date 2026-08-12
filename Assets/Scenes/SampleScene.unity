@@ -1095,7 +1095,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.09920833, y: 0.45424223}
   m_AnchorMax: {x: 0.89472926, y: 0.6706875}
-  m_AnchoredPosition: {x: 5.000061, y: 3.5}
+  m_AnchoredPosition: {x: 5, y: 3.5}
   m_SizeDelta: {x: -2.1495056, y: -25.423828}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &510707101
@@ -1719,7 +1719,7 @@ MonoBehaviour:
   _rollFallMultiplier: 5
   _playerMask:
     serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 384
   _obsticleMask:
     serializedVersion: 2
     m_Bits: 64
@@ -1749,9 +1749,9 @@ Rigidbody:
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 1
-  m_IsKinematic: 1
-  m_Interpolate: 0
-  m_Constraints: 0
+  m_IsKinematic: 0
+  m_Interpolate: 1
+  m_Constraints: 122
   m_CollisionDetection: 0
 --- !u!1 &1180253134
 GameObject:
@@ -3174,9 +3174,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf1def162b6d43440b193453754b0a53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  StartGameSpeed: 0.3
+  StartGameSpeed: 15
   GameSpeedMultiplayer: 1.01
-  MaxGameSpeed: 3.5
+  MaxGameSpeed: 175
 --- !u!4 &1716528012
 Transform:
   m_ObjectHideFlags: 0
@@ -3352,7 +3352,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.49998474}
+  m_AnchoredPosition: {x: 0, y: -0.5}
   m_SizeDelta: {x: -20, y: -13}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1922568907

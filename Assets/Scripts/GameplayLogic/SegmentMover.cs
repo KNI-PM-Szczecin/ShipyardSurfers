@@ -6,6 +6,6 @@ public class SegmentMover : MonoBehaviour
 
     private void FixedUpdate()
     {
-        transform.position -= new Vector3(0, 0, MoveSpeed);
+        transform.position -= new Vector3(0, 0, MoveSpeed * Time.fixedDeltaTime);
     }
 }
