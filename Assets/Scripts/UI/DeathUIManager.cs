@@ -24,6 +24,8 @@ public class DeathUIManager : MonoBehaviour
 
     [SerializeField]
     private GameObject ScoreSavePanel;
+    [SerializeField] 
+    private TMP_InputField ScoreSaveInput;
 
     [SerializeField]
     private TMP_Text ScoreText;
@@ -58,7 +60,13 @@ public class DeathUIManager : MonoBehaviour
 
     public void SaveScore()
     {
-        // ScoreManager.SaveScore(value, username)
+        HighScoreEntry highScoreEntry = new HighScoreEntry
+        {
+            Score = GameManager.instance.Score.Value,
+            Name = ScoreSaveInput.text,
+        };
+
+        HighScoreManager.SaveHighScore(highScoreEntry);
         MainMenu();
     }
 }
