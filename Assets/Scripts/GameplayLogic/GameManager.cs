@@ -19,7 +19,7 @@ public class GameManager : MonoBehaviour
     private float _currentSpeed;
     private float _lastSpeedChange;
     private const float SPEED_CHANGE_INTERVAL = 1;
-    private const float SCORE_ITERATOR_VALUE = 10f;
+    private const float SCORE_ITERATOR_VALUE = 0.5f;
 
     private void Awake()
     {
@@ -42,6 +42,11 @@ public class GameManager : MonoBehaviour
         EventBus.DeathEvent += StopGame;
     }
 
+    private void Update()
+    {
+        Score.Value += SCORE_ITERATOR_VALUE * _currentSpeed * Time.deltaTime;
+    }
+
     private void FixedUpdate()
     {
         if (_lastSpeedChange + SPEED_CHANGE_INTERVAL > Time.time) { return; }
@@ -51,7 +56,7 @@ public class GameManager : MonoBehaviour
         SegmentMover.MoveSpeed = _currentSpeed;
         _lastSpeedChange = Time.time;
 
-        Score.Value += SCORE_ITERATOR_VALUE * _currentSpeed * Time.fixedDeltaTime / 3;
+        
     }
 
     private void StopGame(System.Object o, EventArgs e)

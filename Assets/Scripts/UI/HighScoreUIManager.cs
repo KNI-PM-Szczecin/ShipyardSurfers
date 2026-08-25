@@ -9,7 +9,7 @@ public class HighScoreUIManager : MonoBehaviour
 
     private void Awake()
     {
-        List<HighScoreEntry> highScoreList = HighScoreManager.GetHighScores();
+        List<HighScoreEntry> highScoreList = HighScoreManager.GetHighScores(); 
         print(highScoreList);
         generateScoreboard(highScoreList);
     }

@@ -50,7 +50,6 @@ public class DeathUIManager : MonoBehaviour
         {
             print("WARNINIG: Menu scene in DeathUIManager is null!");
         }
-        
     }
 
     public void EnableSaveScoreInput()
