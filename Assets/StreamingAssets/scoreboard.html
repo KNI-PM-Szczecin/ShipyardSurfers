@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Shipyard Surfers - wyniki</title>
+<style>
+body {
+    background: #191c20;
+    color: #d9dde1;
+    font: 15px/1.5 system-ui, 'Segoe UI', sans-serif;
+    max-width: 540px;
+    margin: 48px auto;
+    padding: 0 20px;
+}
+h1 { font-size: 19px; font-weight: 600; margin: 0; }
+#status { font-size: 12px; color: #6d757d; }
+.label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #848c94;
+    margin: 30px 0 6px;
+}
+#current {
+    font-size: 46px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+#current.idle { color: #4d545b; font-size: 24px; }
+table { width: 100%; border-collapse: collapse; }
+td { padding: 6px 0; border-bottom: 1px solid #262b30; }
+td.rank { color: #848c94; width: 2.2em; }
+td.pts { text-align: right; font-variant-numeric: tabular-nums; }
+#board { overflow: hidden; }
+#pages { display: flex; transition: transform 0.6s ease; }
+.page { flex: 0 0 100%; }
+tr.f td { border-color: transparent; }
+#pageinfo {
+    font-size: 11px;
+    color: #6d757d;
+    text-align: right;
+    margin-top: 6px;
+}
+</style>
+</head>
+<body>
+
+<h1>Shipyard Surfers</h1>
+<div id="status">laczenie...</div>
+
+<div class="label">Aktualny wynik</div>
+<div id="current" class="idle">brak gry</div>
+
+<div class="label">Top 5</div>
+<table><tbody id="top5"></tbody></table>
+
+<div class="label">Wszystkie wyniki</div>
+<div id="board"><div id="pages"></div></div>
+<div id="pageinfo"></div>
+
+<script>
+var PER_PAGE = 5;
+var page = 0;
+var pageCount = 1;
+var lastLeaderboard = '';
+
+function fmt(v) { return Math.floor(v); }
+
+function renderCurrent(d) {
+    var cur = document.getElementById('current');
+    if (d.hasCurrent) {
+        cur.textContent = fmt(d.current);
+        cur.className = '';
+    } else {
+        cur.textContent = 'brak gry';
+        cur.className = 'idle';
+    }
+}
+
+function renderTop5(d) {
+    var top5 = document.getElementById('top5');
+    top5.innerHTML = '';
+    var n = Math.min(5, d.scores.length);
+    for (var i = 0; i < n; i++) {
+        var tr = document.createElement('tr');
+        var rank = document.createElement('td');
+        rank.className = 'rank';
+        rank.textContent = (i + 1) + '.';
+        var name = document.createElement('td');
+        name.textContent = d.names[i] || '???';
+        var pts = document.createElement('td');
+        pts.className = 'pts';
+        pts.textContent = fmt(d.scores[i]);
+        tr.appendChild(rank); tr.appendChild(name); tr.appendChild(pts);
+        top5.appendChild(tr);
+    }
+}
+
+function buildPages(d) {
+    var pages = document.getElementById('pages');
+    pages.innerHTML = '';
+    pageCount = Math.max(1, Math.ceil(d.scores.length / PER_PAGE));
+
+    for (var p = 0; p < pageCount; p++) {
+        var div = document.createElement('div');
+        div.className = 'page';
+        var table = document.createElement('table');
+        var tbody = document.createElement('tbody');
+
+        for (var j = p * PER_PAGE; j < (p + 1) * PER_PAGE; j++) {
+            var tr = document.createElement('tr');
+            if (j < d.scores.length) {
+                var rank = document.createElement('td');
+                rank.className = 'rank';
+                rank.textContent = (j + 1) + '.';
+                var name = document.createElement('td');
+                name.textContent = d.names[j] || '???';
+                var pts = document.createElement('td');
+                pts.className = 'pts';
+                pts.textContent = fmt(d.scores[j]);
+                tr.appendChild(rank); tr.appendChild(name); tr.appendChild(pts);
+            } else {
+                tr.className = 'f';
+                var td = document.createElement('td');
+                td.colSpan = 3;
+                if (j === 0 && d.scores.length === 0) td.textContent = 'brak wynikow';
+                else td.innerHTML = '&nbsp;';
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        }
+
+        table.appendChild(tbody);
+        div.appendChild(table);
+        pages.appendChild(div);
+    }
+
+    if (page >= pageCount) page = 0;
+    applyPage();
+}
+
+function applyPage() {
+    document.getElementById('pages').style.transform = 'translateX(-' + (page * 100) + '%)';
+    document.getElementById('pageinfo').textContent =
+        pageCount > 1 ? 'strona ' + (page + 1) + ' / ' + pageCount : '';
+}
+
+setInterval(function () {
+    if (pageCount <= 1) return;
+    page = (page + 1) % pageCount;
+    applyPage();
+}, 4000);
+
+function onData(text) {
+    var d = JSON.parse(text);
+    renderCurrent(d);
+
+    var lb = JSON.stringify([d.names, d.scores]);
+    if (lb === lastLeaderboard) return;
+    lastLeaderboard = lb;
+
+    renderTop5(d);
+    buildPages(d);
+}
+
+function setStatus(connected) {
+    document.getElementById('status').textContent =
+        connected ? 'polaczono' : 'brak polaczenia - ponawianie...';
+}
+
+function connect() {
+    var ws = new WebSocket('ws://' + location.hostname + ':8081/');
+    ws.onopen = function () { setStatus(true); };
+    ws.onmessage = function (e) { onData(e.data); };
+    ws.onclose = function () { setStatus(false); setTimeout(connect, 1000); };
+}
+connect();
+</script>
+</body>
+</html>
