@@ -16,6 +16,8 @@ public struct ObstacleCell
 
     [Range(1, 3)]
     public int BlockadeLength;
+
+    public bool HasCoin;
 }
 
 [CreateAssetMenu(menuName = "ScriptableObjects/ObsticleSetSO", order = 1)]

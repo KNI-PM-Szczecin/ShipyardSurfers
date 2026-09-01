@@ -17,3 +17,4 @@ MonoBehaviour:
   SlidePrefab: {fileID: 8494139213906352956, guid: 74bdea3237657be468cf6b12d72bd6fb, type: 3}
   BlockadePrefab: {fileID: 4613561068087905962, guid: fae72907d72a1af46bda80cdd1c8ac97, type: 3}
   RampPrefab: {fileID: 2827869805090508491, guid: 9f90736bf6368354b8989cf5737f6947, type: 3}
+  CoinPrefab: {fileID: 9106078611208177907, guid: 7e2d395664323484098030edf6d3f61f, type: 3}

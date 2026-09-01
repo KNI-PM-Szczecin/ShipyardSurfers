@@ -11,6 +11,9 @@ public class TrackApperenceSO : ScriptableObject
     public GameObject SlidePrefab;
     public GameObject BlockadePrefab;
     public GameObject RampPrefab;
+    [Space]
+    [Header("Pickups")]
+    public GameObject CoinPrefab;
 
     public GameObject GetObsticlePrefab(ObsticleType Type)
     {

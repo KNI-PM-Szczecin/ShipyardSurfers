@@ -15,91 +15,136 @@ MonoBehaviour:
   Grid:
   - Type: 1
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 1
   - Type: 1
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 1
     BlockadeLength: 1
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 2
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 2
     BlockadeLength: 1
+    HasCoin: 1
   - Type: 2
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 3
     BlockadeLength: 3
+    HasCoin: 1
   - Type: 4
     BlockadeLength: 1
+    HasCoin: 1
   - Type: 3
     BlockadeLength: 2
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 1
   - Type: 3
     BlockadeLength: 1
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 3
     BlockadeLength: 3
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 1
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 1
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 2
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
+    HasCoin: 0

@@ -1002,7 +1002,7 @@ MonoBehaviour:
   _rollFallMultiplier: 5
   _playerMask:
     serializedVersion: 2
-    m_Bits: 384
+    m_Bits: 896
   _obsticleMask:
     serializedVersion: 2
     m_Bits: 64

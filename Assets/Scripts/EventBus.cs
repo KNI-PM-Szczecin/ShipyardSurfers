@@ -6,6 +6,7 @@ public static class EventBus
     public static event EventHandler DeathEvent;
     public static event EventHandler<bool> WallSideHitEvent;
     public static event EventHandler WallFrontHitEvent;
+    public static event EventHandler CoinPickedUpEvent;
 
     public static void PlayerDeath()
     {
@@ -20,5 +21,10 @@ public static class EventBus
     public static void FrontWallHit()
     {
         WallFrontHitEvent?.Invoke(null, EventArgs.Empty);
+    }
+
+    public static void CoinPickedUp()
+    {
+        CoinPickedUpEvent?.Invoke(null, EventArgs.Empty);
     }
 }

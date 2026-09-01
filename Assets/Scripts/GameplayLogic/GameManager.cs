@@ -20,6 +20,7 @@ public class GameManager : MonoBehaviour
     private float _lastSpeedChange;
     private const float SPEED_CHANGE_INTERVAL = 1;
     private const float SCORE_ITERATOR_VALUE = 0.5f;
+    private const float COIN_SCORE_VALUE = 3f;
 
     private void Awake()
     {
@@ -40,6 +41,12 @@ public class GameManager : MonoBehaviour
         _lastSpeedChange = Time.time;
 
         EventBus.DeathEvent += StopGame;
+        EventBus.CoinPickedUpEvent += AddCoinScore;
+    }
+
+    private void AddCoinScore(System.Object o, EventArgs e)
+    {
+        Score.Value += COIN_SCORE_VALUE;
     }
 
     private void Update()
@@ -69,5 +76,6 @@ public class GameManager : MonoBehaviour
     private void OnDestroy()
     {
         EventBus.DeathEvent -= StopGame;
+        EventBus.CoinPickedUpEvent -= AddCoinScore;
     }
 }

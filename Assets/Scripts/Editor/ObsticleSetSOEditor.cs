@@ -19,7 +19,7 @@ public class ObsticleSetSOEditor : Editor
         const float labelW = 58f;
         const float gap = 3f;
         float lineH = EditorGUIUtility.singleLineHeight;
-        float cellH = lineH * 2f + 8f;
+        float cellH = lineH * 3f + 10f;
 
         bool[] isCovered = new bool[ObsticleSetSO.Rows * ObsticleSetSO.Columns];
         for (int x = 0; x < ObsticleSetSO.Columns; x++)
@@ -50,6 +50,7 @@ public class ObsticleSetSOEditor : Editor
                 var cellProp = gridProp.GetArrayElementAtIndex(idx);
                 var typeProp = cellProp.FindPropertyRelative("Type");
                 var lengthProp = cellProp.FindPropertyRelative("BlockadeLength");
+                var coinProp = cellProp.FindPropertyRelative("HasCoin");
 
                 bool covered = isCovered[idx];
                 var currentType = (ObsticleType)typeProp.enumValueIndex;
@@ -64,6 +65,9 @@ public class ObsticleSetSOEditor : Editor
                 {
                     if (typeProp.enumValueIndex != (int)ObsticleType.Empty) typeProp.enumValueIndex = (int)ObsticleType.Empty;
                     if (lengthProp.intValue != 1) lengthProp.intValue = 1;
+
+                    Rect rc = new Rect(cell.x + 3, cell.y + 7 + lineH * 2, cell.width - 6, lineH);
+                    coinProp.boolValue = EditorGUI.ToggleLeft(rc, "Coin", coinProp.boolValue);
                     continue;
                 }
 
@@ -81,6 +85,9 @@ public class ObsticleSetSOEditor : Editor
                 {
                     lengthProp.intValue = 1;
                 }
+
+                Rect r3 = new Rect(cell.x + 3, cell.y + 7 + lineH * 2, cell.width - 6, lineH);
+                coinProp.boolValue = EditorGUI.ToggleLeft(r3, "Coin", coinProp.boolValue);
             }
         }
 
@@ -92,6 +99,7 @@ public class ObsticleSetSOEditor : Editor
             {
                 gridProp.GetArrayElementAtIndex(i).FindPropertyRelative("Type").enumValueIndex = 0;
                 gridProp.GetArrayElementAtIndex(i).FindPropertyRelative("BlockadeLength").intValue = 1;
+                gridProp.GetArrayElementAtIndex(i).FindPropertyRelative("HasCoin").boolValue = false;
             }
         }
 
