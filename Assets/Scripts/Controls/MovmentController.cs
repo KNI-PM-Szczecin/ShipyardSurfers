@@ -35,6 +35,10 @@ public class MovmentController : MonoBehaviour
     [SerializeField] private float _sideCollisionDistance = 0.4f;
 
     private const float TrackSnapEpsilon = 0.1f;
+    private const float DefaultLaneWidth = 3f;
+
+    public float JumpHeightMultiplier { get; set; } = 1f;
+    public float LaneWidth { get; private set; } = DefaultLaneWidth;
 
     private bool _trackChangeLock = false;
     private bool _bounceLock = false;
@@ -58,6 +62,11 @@ public class MovmentController : MonoBehaviour
         float middleTrackX = _trackTransforms[middleTrackIndex].position.x;
         gameObject.transform.position = new Vector3(middleTrackX, 0, 0);
         _activeTrack = middleTrackIndex;
+
+        if (_trackTransforms.Length > 1)
+        {
+            LaneWidth = Mathf.Abs(_trackTransforms[1].position.x - _trackTransforms[0].position.x);
+        }
 
         _moveAction = InputSystem.actions.FindAction("Move");
         EventBus.WallSideHitEvent += OnSideWallHit;
@@ -133,7 +142,7 @@ public class MovmentController : MonoBehaviour
             changeTrackAsync(_trackTransforms[_activeTrack].position.x, duration, isBounce));
     }
 
-    private void OnSideWallHit(object o, bool increment)
+    private void OnSideWallHit(bool increment)
     {
         if (_isDead) return;
 
@@ -149,7 +158,7 @@ public class MovmentController : MonoBehaviour
         changeTrack(increment, _wallBounceDuration, true);
     }
 
-    private void OnFrontWallHit(object o, EventArgs e)
+    private void OnFrontWallHit()
     {
         Die();
     }
@@ -207,7 +216,9 @@ public class MovmentController : MonoBehaviour
     private IEnumerator jump()
     {
         float startY = transform.position.y;
-        yield return LerpY(startY, startY + _jumpHeight, _jumpDuration);
+        float height = _jumpHeight * JumpHeightMultiplier;
+        float duration = _jumpDuration * JumpHeightMultiplier;
+        yield return LerpY(startY, startY + height, duration);
         _jumpCoroutine = null;
     }
 

@@ -14,6 +14,27 @@ public class TrackApperenceSO : ScriptableObject
     [Space]
     [Header("Pickups")]
     public GameObject CoinPrefab;
+    [Space]
+    [Header("Power ups")]
+    public GameObject CoinMagnetPrefab;
+    public GameObject SuperJumpPrefab;
+    public GameObject DoublePointsPrefab;
+
+    public GameObject GetPowerUpPrefab(PowerUpType type)
+    {
+        switch (type)
+        {
+            case PowerUpType.CoinMagnet:
+                return CoinMagnetPrefab;
+            case PowerUpType.SuperJump:
+                return SuperJumpPrefab;
+            case PowerUpType.DoublePoints:
+                return DoublePointsPrefab;
+            default:
+                Debug.LogError("Unknown PowerUpType used in GetPowerUpPrefab!");
+                return null;
+        }
+    }
 
     public GameObject GetObsticlePrefab(ObsticleType Type)
     {

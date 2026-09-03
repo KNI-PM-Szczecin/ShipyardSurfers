@@ -16,6 +16,8 @@ public class GameManager : MonoBehaviour
 
     public Observable<float> Score = new Observable<float>(0f);
 
+    public float ScoreMultiplier { get; set; } = 1f;
+
     private float _currentSpeed;
     private float _lastSpeedChange;
     private const float SPEED_CHANGE_INTERVAL = 1;
@@ -44,14 +46,14 @@ public class GameManager : MonoBehaviour
         EventBus.CoinPickedUpEvent += AddCoinScore;
     }
 
-    private void AddCoinScore(System.Object o, EventArgs e)
+    private void AddCoinScore()
     {
-        Score.Value += COIN_SCORE_VALUE;
+        Score.Value += COIN_SCORE_VALUE * ScoreMultiplier;
     }
 
     private void Update()
     {
-        Score.Value += SCORE_ITERATOR_VALUE * _currentSpeed * Time.deltaTime;
+        Score.Value += SCORE_ITERATOR_VALUE * _currentSpeed * ScoreMultiplier * Time.deltaTime;
     }
 
     private void FixedUpdate()
@@ -66,7 +68,7 @@ public class GameManager : MonoBehaviour
         
     }
 
-    private void StopGame(System.Object o, EventArgs e)
+    private void StopGame()
     {
         _currentSpeed = 0f;
         SegmentMover.MoveSpeed = 0;

@@ -6,7 +6,14 @@ public class Coin : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (_pickedUp || !other.CompareTag("Player")) return;
+        if (!other.CompareTag("Player")) return;
+
+        Collect();
+    }
+
+    public void Collect()
+    {
+        if (_pickedUp) return;
 
         _pickedUp = true;
         EventBus.CoinPickedUp();

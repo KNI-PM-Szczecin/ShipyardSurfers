@@ -281,6 +281,7 @@ GameObject:
   - component: {fileID: 6374006309313307434}
   - component: {fileID: 3080349017697952385}
   - component: {fileID: 630156268367630151}
+  - component: {fileID: 8811223344556677001}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -318,6 +319,18 @@ MonoBehaviour:
   StartGameSpeed: 15
   GameSpeedMultiplayer: 1.01
   MaxGameSpeed: 175
+--- !u!114 &8811223344556677001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 995359884608894741}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5aa64ef76579d63fe2aefec80e669e06, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::DoublePointsEffect
 --- !u!114 &630156268367630151
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1501,6 +1514,108 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!1 &8811223344556677101
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8811223344556677102}
+  - component: {fileID: 8811223344556677103}
+  - component: {fileID: 8811223344556677104}
+  - component: {fileID: 8811223344556677105}
+  m_Layer: 5
+  m_Name: PowerUpPanel
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &8811223344556677102
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8811223344556677101}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6284716580200681614}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 1, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
+  m_AnchoredPosition: {x: -20, y: 20}
+  m_SizeDelta: {x: 320, y: 0}
+  m_Pivot: {x: 1, y: 0}
+--- !u!114 &8811223344556677103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8811223344556677101}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59f8146938fff824cb5fd77236b75775, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.VerticalLayoutGroup
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 8
+  m_Spacing: 8
+  m_ChildForceExpandWidth: 1
+  m_ChildForceExpandHeight: 0
+  m_ChildControlWidth: 1
+  m_ChildControlHeight: 1
+  m_ChildScaleWidth: 0
+  m_ChildScaleHeight: 0
+  m_ReverseArrangement: 1
+--- !u!114 &8811223344556677104
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8811223344556677101}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 0
+  m_VerticalFit: 2
+--- !u!114 &8811223344556677105
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8811223344556677101}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08d774535409510b38ddc9e110e70d3e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PowerUpUIManager
+  _sliderPrefab: {fileID: 4471100000000000005, guid: 3708c531ed50ba602a8dd2eb0c228e1e, type: 3}
+  _container: {fileID: 8811223344556677102}
+  _visuals:
+  - Type: 0
+    Label: Magnes
+    Color: {r: 0.85, g: 0.2, b: 0.6, a: 1}
+  - Type: 1
+    Label: Super skok
+    Color: {r: 0.2, g: 0.7, b: 1, a: 1}
+  - Type: 2
+    Label: 2x punkty
+    Color: {r: 0.3, g: 0.9, b: 0.3, a: 1}
 --- !u!1 &6093608602534959072
 GameObject:
   m_ObjectHideFlags: 0
@@ -1532,6 +1647,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2335728403120597653}
+  - {fileID: 8811223344556677102}
   m_Father: {fileID: 4736123754054439270}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}

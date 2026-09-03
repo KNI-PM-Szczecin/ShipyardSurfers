@@ -18,3 +18,6 @@ MonoBehaviour:
   BlockadePrefab: {fileID: 4613561068087905962, guid: fae72907d72a1af46bda80cdd1c8ac97, type: 3}
   RampPrefab: {fileID: 2827869805090508491, guid: 9f90736bf6368354b8989cf5737f6947, type: 3}
   CoinPrefab: {fileID: 9106078611208177907, guid: 7e2d395664323484098030edf6d3f61f, type: 3}
+  CoinMagnetPrefab: {fileID: 7381120945112233001, guid: 7cc336775c3b10cd3daa51a32caead25, type: 3}
+  SuperJumpPrefab: {fileID: 7381120945112233101, guid: b446f816a5fbe3cb297addec9a782530, type: 3}
+  DoublePointsPrefab: {fileID: 7381120945112233201, guid: be936426d9174674ee41ed654a60924b, type: 3}

@@ -871,6 +871,8 @@ GameObject:
   - component: {fileID: 1128412751}
   - component: {fileID: 1128412754}
   - component: {fileID: 1128412755}
+  - component: {fileID: 1128412756}
+  - component: {fileID: 1128412757}
   m_Layer: 7
   m_Name: Player
   m_TagString: Player
@@ -1009,6 +1011,33 @@ MonoBehaviour:
   _rayStartHeight: 1
   _stepTolerance: 0.05
   _sideCollisionDistance: 0.4
+--- !u!114 &1128412756
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1128412749}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6ba69d5710fb8a543073c4efe909a08, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::CoinMagnetEffect
+  _coinMask:
+    serializedVersion: 2
+    m_Bits: 512
+--- !u!114 &1128412757
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1128412749}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a150a549a7206df78981001ba9884bd, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::SuperJumpEffect
 --- !u!54 &1128412755
 Rigidbody:
   m_ObjectHideFlags: 0

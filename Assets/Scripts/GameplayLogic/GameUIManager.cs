@@ -32,7 +32,7 @@ public class GameUIManager : MonoBehaviour
         ScoreText.text = ((int)score).ToString();
     }
 
-    public void ShowDeathScreen(System.Object o, EventArgs e)
+    public void ShowDeathScreen()
     {
         EndScreen.SetActive(true);
         GameplayPanel.SetActive(false);

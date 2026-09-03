@@ -114,6 +114,14 @@ public class TrackInitiator : MonoBehaviour
     {
         if (look.CoinPrefab == null) return;
 
+        GameObject powerUpPrefab = null;
+        if (PowerUpSpawnRoller.TryRoll(CountCoins(set, cols), out int powerUpIndex, out PowerUpType type))
+        {
+            powerUpPrefab = look.GetPowerUpPrefab(type);
+        }
+
+        int coinIndex = 0;
+
         for (int y = 0; y < ObsticleSetSO.Rows; y++)
             for (int x = 0; x < cols; x++)
             {
@@ -130,13 +138,29 @@ public class TrackInitiator : MonoBehaviour
                     float t = (i + 0.5f) / CoinsPerCell;
                     float yLocal = Mathf.Lerp(yStart, yEnd, t) + coinYArc[x, y] * 4f * t * (1f - t);
 
-                    GameObject coin = Instantiate(look.CoinPrefab, transform);
+                    bool isPowerUp = powerUpPrefab != null && coinIndex == powerUpIndex;
+                    coinIndex++;
+
+                    GameObject coin = Instantiate(isPowerUp ? powerUpPrefab : look.CoinPrefab, transform);
                     coin.transform.localPosition = new Vector3(
                         laneLocal.x,
                         yLocal,
                         zNearLocal + (y + t) * cellDepth);
                 }
             }
+    }
+
+    private int CountCoins(ObsticleSetSO set, int cols)
+    {
+        int count = 0;
+
+        for (int y = 0; y < ObsticleSetSO.Rows; y++)
+            for (int x = 0; x < cols; x++)
+            {
+                if (set.GetCell(x, y).HasCoin && LaneCenters[x] != null) count += CoinsPerCell;
+            }
+
+        return count;
     }
 
     private float GetTopLocalY(GameObject go)
