@@ -5,6 +5,7 @@ public static class EventBus
     public static event Action DeathEvent;
     public static event Action<bool> WallSideHitEvent;
     public static event Action WallFrontHitEvent;
+    public static event Action KillZoneHitEvent;
     public static event Action CoinPickedUpEvent;
     public static event Action<PowerUpType> PowerUpPickedUpEvent;
     public static event Action<PowerUpEffect> PowerUpActivatedEvent;
@@ -23,6 +24,11 @@ public static class EventBus
     public static void FrontWallHit()
     {
         WallFrontHitEvent?.Invoke();
+    }
+
+    public static void KillZoneHit()
+    {
+        KillZoneHitEvent?.Invoke();
     }
 
     public static void CoinPickedUp()

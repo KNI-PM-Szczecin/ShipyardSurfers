@@ -3,7 +3,7 @@ using UnityEngine;
 [RequireComponent(typeof(MovmentController))]
 public class CoinMagnetEffect : PowerUpEffect
 {
-    private const int MAX_COINS_IN_RANGE = 32;
+    private const int MAX_COINS_IN_RANGE = 64;
 
     [SerializeField] private LayerMask _coinMask = 1 << 9;
 

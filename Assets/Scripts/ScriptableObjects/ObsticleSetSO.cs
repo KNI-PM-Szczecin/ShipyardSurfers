@@ -14,7 +14,7 @@ public struct ObstacleCell
 {
     public ObsticleType Type;
 
-    [Range(1, 3)]
+    [Range(1, ObsticleSetSO.MaxBlockadeLength)]
     public int BlockadeLength;
 
     public bool HasCoin;
@@ -25,6 +25,7 @@ public class ObsticleSetSO : ScriptableObject
 {
     public const int Columns = 3;
     public const int Rows = 15;
+    public const int MaxBlockadeLength = 3;
 
     [HideInInspector]
     public ObstacleCell[] Grid = new ObstacleCell[Columns * Rows];
