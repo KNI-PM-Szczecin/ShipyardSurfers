@@ -277,6 +277,8 @@ GameObject:
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
   - component: {fileID: 330585548}
+  - component: {fileID: 330585550}
+  - component: {fileID: 330585549}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -434,6 +436,32 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   CustomBlends: {fileID: 0}
+--- !u!114 &330585549
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8efedf1471c50684eb0c23c6250d0c0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NormalsReplacementShader
+  normalsShader: {fileID: 4800000, guid: 10d5bc6ab4f8e664c90702f04480b516, type: 3}
+--- !u!114 &330585550
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f46e8a8274b72bf4e8a6673cfc2a67e5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraDepthTextureMode
+  depthTextureMode: 1
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -1011,33 +1039,6 @@ MonoBehaviour:
   _rayStartHeight: 1
   _stepTolerance: 0.05
   _sideCollisionDistance: 0.4
---- !u!114 &1128412756
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1128412749}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f6ba69d5710fb8a543073c4efe909a08, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::CoinMagnetEffect
-  _coinMask:
-    serializedVersion: 2
-    m_Bits: 512
---- !u!114 &1128412757
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1128412749}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2a150a549a7206df78981001ba9884bd, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::SuperJumpEffect
 --- !u!54 &1128412755
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1065,6 +1066,33 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 122
   m_CollisionDetection: 0
+--- !u!114 &1128412756
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1128412749}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6ba69d5710fb8a543073c4efe909a08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CoinMagnetEffect
+  _coinMask:
+    serializedVersion: 2
+    m_Bits: 512
+--- !u!114 &1128412757
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1128412749}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a150a549a7206df78981001ba9884bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SuperJumpEffect
 --- !u!1 &1180253134
 GameObject:
   m_ObjectHideFlags: 0
@@ -1932,6 +1960,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6636937968765547911, guid: 19f258978f1517d47bbe5f442401dce3, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 1.6000977
+      objectReference: {fileID: 0}
     - target: {fileID: 8609777038671062975, guid: 19f258978f1517d47bbe5f442401dce3, type: 3}
       propertyPath: m_Name
       value: GM&UI
@@ -2110,6 +2142,10 @@ PrefabInstance:
       propertyPath: m_TagString
       value: Segment
       objectReference: {fileID: 0}
+    - target: {fileID: 6562177111245551807, guid: d5c0af6cb78a90e42a31a0155d5112c4, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 06f3fcd6f415bc44b85530d15ec76c40, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 5228876321494212826, guid: d5c0af6cb78a90e42a31a0155d5112c4, type: 3}
