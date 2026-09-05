@@ -10,6 +10,7 @@ public static class EventBus
     public static event Action<PowerUpType> PowerUpPickedUpEvent;
     public static event Action<PowerUpEffect> PowerUpActivatedEvent;
     public static event Action<PowerUpEffect> PowerUpDeactivatedEvent;
+    public static event Action<GestureType> GestureDetectedEvent;
 
     public static void PlayerDeath()
     {
@@ -49,5 +50,10 @@ public static class EventBus
     public static void PowerUpDeactivated(PowerUpEffect effect)
     {
         PowerUpDeactivatedEvent?.Invoke(effect);
+    }
+
+    public static void GestureDetected(GestureType gesture)
+    {
+        GestureDetectedEvent?.Invoke(gesture);
     }
 }
