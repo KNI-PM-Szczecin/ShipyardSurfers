@@ -277,6 +277,8 @@ GameObject:
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
   - component: {fileID: 330585548}
+  - component: {fileID: 330585550}
+  - component: {fileID: 330585549}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -434,6 +436,32 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   CustomBlends: {fileID: 0}
+--- !u!114 &330585549
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23f7172c8e760414d82d0328fb6b28e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NormalsReplacementShader
+  normalsShader: {fileID: 4800000, guid: f7ba3849696e25a41be499e87370b735, type: 3}
+--- !u!114 &330585550
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ac26261e28b7044ebc2481b9b3391e6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraDepthTextureMode
+  depthTextureMode: 0
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -2005,6 +2033,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6636937968765547911, guid: 19f258978f1517d47bbe5f442401dce3, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 1.6000977
+      objectReference: {fileID: 0}
     - target: {fileID: 8609777038671062975, guid: 19f258978f1517d47bbe5f442401dce3, type: 3}
       propertyPath: m_Name
       value: GM&UI
@@ -2187,6 +2219,10 @@ PrefabInstance:
       propertyPath: m_TagString
       value: Segment
       objectReference: {fileID: 0}
+    - target: {fileID: 6562177111245551807, guid: d5c0af6cb78a90e42a31a0155d5112c4, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 06f3fcd6f415bc44b85530d15ec76c40, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 5228876321494212826, guid: d5c0af6cb78a90e42a31a0155d5112c4, type: 3}
