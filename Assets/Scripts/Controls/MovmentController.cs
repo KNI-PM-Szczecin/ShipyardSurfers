@@ -1,38 +1,50 @@
-using System;
 using System.Collections;
-using System.ComponentModel;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Splines.Interpolators;
+using UnityEngine.Serialization;
 
+[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(CapsuleCollider))]
 public class MovmentController : MonoBehaviour
 {
+    private enum VerticalState
+    {
+        Grounded,
+        Jumping,
+        Falling,
+        Rolling
+    }
+
     [Header("Track placement")]
     [SerializeField] private Transform[] _trackTransforms;
-    private int _activeTrack;
-    private InputAction _moveAction;
 
     [Header("Track changing")]
     [SerializeField] private float _trackChangeDuration = 0.3f;
     [SerializeField] private float _wallBounceDuration = 0.15f;
-    [SerializeField] private float _rollDuration = 0.3f;
-    [Space]
+    [SerializeField, Tooltip("Hitting a side wall again within this many seconds after a bounce kills the player.")]
+    private float _stumbleDuration = 1f;
+    [SerializeField] private LayerMask _obsticleMask = 1 << 6;
+    [SerializeField] private float _sideCollisionDistance = 0.4f;
+
     [Header("Jumping")]
     [SerializeField] private float _jumpDuration = 0.2f;
     [SerializeField] private float _jumpHeight = 1f;
     [SerializeField] private float _fallSpeed = 1f;
-    [SerializeField] private float _rayLength = 1f;
-    [Space]
+    [SerializeField, Tooltip("A flat surface at most this far above the player still counts as ground to land on.")]
+    private float _landTolerance = 0.5f;
+
     [Header("Roll")]
+    [SerializeField] private float _rollDuration = 0.3f;
     [SerializeField] private float _rollHeight = -0.5f;
     [SerializeField] private float _rollFallMultiplier = 2f;
-    [Space]
-    [Header("RampsHandling")]
-    [SerializeField] private LayerMask _playerMask;
-    [SerializeField] private LayerMask _obsticleMask = 1 << 6;
+
+    [Header("Ground detection")]
+    [SerializeField, FormerlySerializedAs("_playerMask"), Tooltip("Layers that never count as ground.")]
+    private LayerMask _groundIgnoredLayers;
     [SerializeField] private float _rayStartHeight = 1f;
+    [SerializeField] private float _rayLength = 1f;
+    [SerializeField] private float _groundProbeForwardOffset = 1f;
     [SerializeField] private float _stepTolerance = 0.05f;
-    [SerializeField] private float _sideCollisionDistance = 0.4f;
 
     private const float TrackSnapEpsilon = 0.1f;
     private const float DefaultLaneWidth = 3f;
@@ -40,28 +52,51 @@ public class MovmentController : MonoBehaviour
     public float JumpHeightMultiplier { get; set; } = 1f;
     public float LaneWidth { get; private set; } = DefaultLaneWidth;
 
-    private bool _trackChangeLock = false;
-    private bool _bounceLock = false;
-    private bool _lastChangeIncrement = false;
-    private bool _isDead = false;
-    private bool _rollLock = false;
-    private float _initialY;
+    private InputAction _moveAction;
+    private Rigidbody _rigidbody;
+    private GroundProbe _groundProbe;
 
-    private Coroutine _trackChangeCoroutine = null;
-    private Coroutine _jumpCoroutine = null;
-    private Coroutine _fallCoroutine = null;
-    private Coroutine _rollCoroutine = null;
+    private int _activeTrack;
+    private bool _trackChangeLock;
+    private bool _lastChangeIncrement;
+    private float _stumbleEndTime;
+    private Coroutine _trackChangeCoroutine;
 
-    void Start()
+    private VerticalState _verticalState = VerticalState.Grounded;
+    private float _jumpStartY;
+    private float _jumpElapsed;
+    private float _fallSpeedMultiplier = 1f;
+    private bool _rollQueued;
+    private float _rollElapsed;
+    private float _standingY;
+
+    private bool _isDead;
+
+    private bool IsStumbling => Time.time < _stumbleEndTime;
+
+    private void Awake()
     {
-        if (_trackTransforms.Length == 0) {
-            print("ERROR: there are no tracks");
+        _rigidbody = GetComponent<Rigidbody>();
+
+        CapsuleCollider capsule = GetComponent<CapsuleCollider>();
+        float standingOffset = capsule.height * 0.5f - capsule.center.y;
+        _groundProbe = new GroundProbe(~_groundIgnoredLayers.value, capsule.radius, standingOffset,
+            _rayStartHeight, _rayLength, _groundProbeForwardOffset);
+    }
+
+    private void Start()
+    {
+        if (_trackTransforms == null || _trackTransforms.Length == 0)
+        {
+            Debug.LogError("There are no tracks assigned to the player.", this);
+            enabled = false;
+            return;
         }
 
-        int middleTrackIndex = Mathf.RoundToInt(_trackTransforms.Length / 2);
-        float middleTrackX = _trackTransforms[middleTrackIndex].position.x;
-        gameObject.transform.position = new Vector3(middleTrackX, 0, 0);
+        int middleTrackIndex = _trackTransforms.Length / 2;
+        transform.position = new Vector3(_trackTransforms[middleTrackIndex].position.x, 0f, 0f);
         _activeTrack = middleTrackIndex;
+        _standingY = transform.position.y;
 
         if (_trackTransforms.Length > 1)
         {
@@ -69,63 +104,48 @@ public class MovmentController : MonoBehaviour
         }
 
         _moveAction = InputSystem.actions.FindAction("Move");
+
         EventBus.WallSideHitEvent += OnSideWallHit;
         EventBus.WallFrontHitEvent += OnFrontWallHit;
-        _initialY = transform.position.y;
+        EventBus.KillZoneHitEvent += OnKillZoneHit;
     }
 
-    void FixedUpdate()
+    private void OnDestroy()
     {
-        Vector2 moveState = _moveAction.ReadValue<Vector2>();
-
-        if (moveState.x != 0 && !_trackChangeLock)
-        {
-            changeTrack(moveState.x > 0, _trackChangeDuration);
-        }
-
-        if (moveState.y > 0 && canJump())
-        {
-            print("Jump");
-            _jumpCoroutine = StartCoroutine(jump());
-        }
-
-        if (moveState.y < 0)
-        {
-            roll();
-        }
-
-        if (_jumpCoroutine == null && !_rollLock)
-        {
-            if (TryGetGroundY(out float groundY))
-            {
-                float dy = groundY - transform.position.y;
-
-                if (dy >= -_stepTolerance)
-                {
-                    if (_fallCoroutine != null) { StopCoroutine(_fallCoroutine); _fallCoroutine = null; }
-                    SetY(groundY);
-                }
-                else if (_fallCoroutine == null)
-                {
-                    _fallCoroutine = StartCoroutine(fall(_fallSpeed));
-                }
-            }
-            else if (_fallCoroutine == null)
-            {
-                _fallCoroutine = StartCoroutine(fall(_fallSpeed));
-            }
-        }
+        EventBus.WallSideHitEvent -= OnSideWallHit;
+        EventBus.WallFrontHitEvent -= OnFrontWallHit;
+        EventBus.KillZoneHitEvent -= OnKillZoneHit;
     }
 
-    private void changeTrack(bool increment, float duration, bool isBounce = false)
+    private void FixedUpdate()
+    {
+        Vector2 moveInput = _moveAction.ReadValue<Vector2>();
+
+        HandleLaneInput(moveInput.x);
+        if (_isDead) return;
+
+        HandleVerticalInput(moveInput.y);
+        UpdateVerticalMotion(Time.fixedDeltaTime);
+    }
+
+    #region Lane changes
+
+    private void HandleLaneInput(float horizontal)
+    {
+        if (horizontal == 0f || _trackChangeLock) return;
+
+        ChangeTrack(horizontal > 0f, _trackChangeDuration);
+    }
+
+    private void ChangeTrack(bool increment, float duration, bool isBounce = false)
     {
         if (_isDead) return;
 
         int targetTrack = isBounce
-            ? findNeighbouringTrack(transform.position.x, increment)
-            : (increment ? _activeTrack + 1 : _activeTrack - 1);
+            ? FindNeighbouringTrack(transform.position.x, increment)
+            : _activeTrack + (increment ? 1 : -1);
 
-        if (targetTrack > _trackTransforms.Length - 1 || targetTrack < 0)
+        if (targetTrack < 0 || targetTrack >= _trackTransforms.Length)
         {
             HandleDoubleSideHit(targetTrack);
             return;
@@ -136,34 +156,10 @@ public class MovmentController : MonoBehaviour
         _activeTrack = targetTrack;
         _trackChangeLock = true;
         _lastChangeIncrement = increment;
-        if (!isBounce) _bounceLock = false;
-
-        _trackChangeCoroutine = StartCoroutine(
-            changeTrackAsync(_trackTransforms[_activeTrack].position.x, duration, isBounce));
+        _trackChangeCoroutine = StartCoroutine(ChangeTrackRoutine(_trackTransforms[targetTrack].position.x, duration));
     }
 
-    private void OnSideWallHit(bool increment)
-    {
-        if (_isDead) return;
-
-        if (_trackChangeLock && increment == _lastChangeIncrement) return;
-
-        if (_bounceLock)
-        {
-            Die();
-            return;
-        }
-
-        _bounceLock = true;
-        changeTrack(increment, _wallBounceDuration, true);
-    }
-
-    private void OnFrontWallHit()
-    {
-        Die();
-    }
-
-    private int findNeighbouringTrack(float x, bool increment)
+    private int FindNeighbouringTrack(float x, bool increment)
     {
         int closest = increment ? _trackTransforms.Length : -1;
         float closestDistance = float.MaxValue;
@@ -184,134 +180,245 @@ public class MovmentController : MonoBehaviour
         return closest;
     }
 
-    private IEnumerator changeTrackAsync(float x, float duration, bool isBounce)
+    private IEnumerator ChangeTrackRoutine(float targetX, float duration)
     {
-        float elapsed = 0;
+        float elapsed = 0f;
         float startX = transform.position.x;
-        float direction = x > startX ? 1f : -1f;
+        Vector3 sideDirection = Vector3.right * (targetX > startX ? 1f : -1f);
 
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            float newX = Mathf.Lerp(startX, x, elapsed / duration);
-            Vector3 origin = transform.position + Vector3.up * _rayStartHeight;
 
-            if (Physics.Raycast(origin, Vector3.right * direction, out RaycastHit hit,
-                   _sideCollisionDistance, _obsticleMask, QueryTriggerInteraction.Ignore))
+            Vector3 origin = transform.position + Vector3.up * _rayStartHeight;
+            if (Physics.Raycast(origin, sideDirection, _sideCollisionDistance, _obsticleMask, QueryTriggerInteraction.Ignore))
             {
                 Die();
                 yield break;
             }
 
+            float newX = Mathf.Lerp(startX, targetX, elapsed / duration);
             transform.position = new Vector3(newX, transform.position.y, transform.position.z);
 
             yield return null;
         }
 
         _trackChangeLock = false;
-        if (isBounce) _bounceLock = false;
         _trackChangeCoroutine = null;
     }
 
-    private IEnumerator jump()
+    private void OnSideWallHit(bool bounceRight)
     {
-        float startY = transform.position.y;
-        float height = _jumpHeight * JumpHeightMultiplier;
-        float duration = _jumpDuration * JumpHeightMultiplier;
-        yield return LerpY(startY, startY + height, duration);
-        _jumpCoroutine = null;
-    }
+        if (_isDead) return;
+        if (_trackChangeLock && bounceRight == _lastChangeIncrement) return;
 
-    private bool canJump() => TryGetGroundY(out _);
-
-    private IEnumerator fall(float speed)
-    {
-        while (true)
+        if (IsStumbling)
         {
-            if (TryGetGroundY(out float groundY) && transform.position.y <= groundY)
-            {
-                SetY(groundY);
-                break;
-            }
-            SetY(transform.position.y - speed * Time.deltaTime);
-            yield return null;
-        }
-        _fallCoroutine = null;
-    }
-
-    private void roll()
-    {
-        if (_rollLock) return;
-
-        _rollLock = true;
-
-        if (_jumpCoroutine != null)
-        {
-            StopCoroutine(_jumpCoroutine);
-            _jumpCoroutine = null;
+            Die();
+            return;
         }
 
-        if (_rollCoroutine != null) StopCoroutine(_rollCoroutine);
-        _rollCoroutine = StartCoroutine(rollAsync());
-    }
-
-    private IEnumerator rollAsync()
-    {
-        if (!canJump())
-        {
-            if (_fallCoroutine != null) StopCoroutine(_fallCoroutine);
-            _fallCoroutine = StartCoroutine(fall(_fallSpeed * _rollFallMultiplier));
-            yield return _fallCoroutine;
-            _fallCoroutine = null;
-        }
-
-        float targetY = _initialY + _rollHeight;
-
-        yield return LerpY(transform.position.y, targetY, _rollDuration);
-        yield return LerpY(transform.position.y, _initialY, _rollDuration);
-
-        transform.position = new Vector3(transform.position.x, _initialY, transform.position.z);
-        _rollLock = false;
-        _rollCoroutine = null;
-    }
-
-    private IEnumerator LerpY(float from, float to, float duration)
-    {
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            float newY = Mathf.Lerp(from, to, elapsed / duration);
-            transform.position = new Vector3(transform.position.x, newY, transform.position.z);
-            yield return null;
-        }
-    }
-
-    private void SetY(float y) =>
-        transform.position = new Vector3(transform.position.x, y, transform.position.z);
-
-    private bool TryGetGroundY(out float groundY)
-    { 
-        Vector3 origin = transform.position + Vector3.up * _rayStartHeight + Vector3.forward;
-        float capsuleRadius = 0.5f;
-
-        if (Physics.SphereCast(origin, capsuleRadius, Vector3.down, out RaycastHit hit,
-                               _rayStartHeight + _rayLength, ~_playerMask))
-        {
-            groundY = hit.point.y + 1f;
-            return true;
-        }
-
-        groundY = 0f;
-        return false;
+        _stumbleEndTime = Time.time + _stumbleDuration;
+        CancelJumpIfAirborne();
+        ChangeTrack(bounceRight, _wallBounceDuration, isBounce: true);
     }
 
     private void HandleDoubleSideHit(int targetTrack)
     {
         int trackId = targetTrack < 0 ? 1 : _trackTransforms.Length - 2;
-        transform.position = new Vector3(_trackTransforms[trackId].position.x, _initialY, _trackTransforms[trackId].position.z);
+        transform.position = new Vector3(_trackTransforms[trackId].position.x, transform.position.y, transform.position.z);
         Die();
     }
+
+    #endregion
+
+    #region Vertical motion
+
+    private void HandleVerticalInput(float vertical)
+    {
+        if (vertical > 0f)
+        {
+            TryStartJump();
+        }
+        else if (vertical < 0f)
+        {
+            TryStartRoll();
+        }
+    }
+
+    private void UpdateVerticalMotion(float deltaTime)
+    {
+        switch (_verticalState)
+        {
+            case VerticalState.Grounded:
+                UpdateGrounded();
+                break;
+            case VerticalState.Jumping:
+                UpdateJumping(deltaTime);
+                break;
+            case VerticalState.Falling:
+                UpdateFalling(deltaTime);
+                break;
+            case VerticalState.Rolling:
+                UpdateRolling(deltaTime);
+                break;
+        }
+    }
+
+    private void TryStartJump()
+    {
+        if (_verticalState == VerticalState.Rolling) EndRoll();
+        if (_verticalState != VerticalState.Grounded) return;
+
+        _jumpStartY = transform.position.y;
+        _jumpElapsed = 0f;
+        _verticalState = VerticalState.Jumping;
+    }
+
+    private void TryStartRoll()
+    {
+        switch (_verticalState)
+        {
+            case VerticalState.Rolling:
+                return;
+
+            case VerticalState.Grounded:
+                if (_groundProbe.TryProbe(transform.position, out GroundHit hit) && hit.IsSlope) return;
+                StartRoll();
+                return;
+
+            default:
+                StartFall(_rollFallMultiplier);
+                _rollQueued = true;
+                return;
+        }
+    }
+
+    private void UpdateGrounded()
+    {
+        if (_groundProbe.TryProbe(transform.position, out GroundHit hit) && hit.StandingY >= transform.position.y - _stepTolerance)
+        {
+            SetY(hit.StandingY);
+            return;
+        }
+
+        StartFall(1f);
+    }
+
+    private void UpdateJumping(float deltaTime)
+    {
+        float duration = _jumpDuration * JumpHeightMultiplier;
+        float height = _jumpHeight * JumpHeightMultiplier;
+
+        _jumpElapsed += deltaTime;
+        SetY(Mathf.Lerp(_jumpStartY, _jumpStartY + height, _jumpElapsed / duration));
+
+        if (_jumpElapsed >= duration) StartFall(1f);
+    }
+
+    private void StartFall(float speedMultiplier)
+    {
+        _fallSpeedMultiplier = speedMultiplier;
+        _verticalState = VerticalState.Falling;
+    }
+
+    private void CancelJumpIfAirborne()
+    {
+        if (_verticalState == VerticalState.Jumping) StartFall(1f);
+    }
+
+    private void UpdateFalling(float deltaTime)
+    {
+        float currentY = transform.position.y;
+        float nextY = currentY - _fallSpeed * _fallSpeedMultiplier * deltaTime;
+
+        if (_groundProbe.TryProbe(transform.position, out GroundHit hit) && hit.StandingY >= nextY && CanLandOn(hit, currentY))
+        {
+            Land(hit);
+            return;
+        }
+
+        SetY(nextY);
+    }
+
+    private bool CanLandOn(GroundHit hit, float currentY) => hit.IsSlope || hit.StandingY - currentY <= _landTolerance;
+
+    private void Land(GroundHit hit)
+    {
+        SetY(hit.StandingY);
+        _standingY = hit.StandingY;
+        _fallSpeedMultiplier = 1f;
+        _verticalState = VerticalState.Grounded;
+
+        if (!_rollQueued) return;
+
+        _rollQueued = false;
+        if (!hit.IsSlope) StartRoll();
+    }
+
+    private void StartRoll()
+    {
+        _standingY = transform.position.y;
+        _rollElapsed = 0f;
+        _verticalState = VerticalState.Rolling;
+    }
+
+    private void UpdateRolling(float deltaTime)
+    {
+        Vector3 standingPosition = new Vector3(transform.position.x, _standingY, transform.position.z);
+        bool hasGround = _groundProbe.TryProbe(standingPosition, out GroundHit hit)
+                         && hit.StandingY >= _standingY - _stepTolerance;
+
+        if (!hasGround)
+        {
+            EndRoll();
+            StartFall(1f);
+            return;
+        }
+
+        if (hit.IsSlope)
+        {
+            EndRoll();
+            return;
+        }
+
+        _standingY = hit.StandingY;
+        _rollElapsed += deltaTime;
+
+        if (_rollElapsed >= _rollDuration * 2f)
+        {
+            EndRoll();
+            return;
+        }
+
+        SetY(_standingY + RollOffset(_rollElapsed));
+    }
+
+    private float RollOffset(float elapsed)
+    {
+        float t = elapsed < _rollDuration
+            ? elapsed / _rollDuration
+            : 2f - elapsed / _rollDuration;
+
+        return _rollHeight * Mathf.Clamp01(t);
+    }
+
+    private void EndRoll()
+    {
+        SetY(_standingY);
+        _verticalState = VerticalState.Grounded;
+    }
+
+    private void SetY(float y) =>
+        transform.position = new Vector3(transform.position.x, y, transform.position.z);
+
+    #endregion
+
+    #region Death
+
+    private void OnFrontWallHit() => Die();
+
+    private void OnKillZoneHit() => Die();
 
     private void Die()
     {
@@ -320,17 +427,20 @@ public class MovmentController : MonoBehaviour
         _isDead = true;
         StopAllCoroutines();
         _trackChangeCoroutine = null;
-        _jumpCoroutine = null;
-        _fallCoroutine = null;
-        _rollCoroutine = null;
+        FreezeRigidbody();
 
         EventBus.PlayerDeath();
-        this.enabled = false;
+        enabled = false;
     }
 
-    private void OnDestroy()
+    private void FreezeRigidbody()
     {
-        EventBus.WallSideHitEvent -= OnSideWallHit;
-        EventBus.WallFrontHitEvent -= OnFrontWallHit;
+        if (_rigidbody.isKinematic) return;
+
+        _rigidbody.linearVelocity = Vector3.zero;
+        _rigidbody.angularVelocity = Vector3.zero;
+        _rigidbody.isKinematic = true;
     }
+
+    #endregion
 }

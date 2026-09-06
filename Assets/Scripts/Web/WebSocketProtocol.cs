@@ -6,18 +6,30 @@ using System.Text.RegularExpressions;
 
 public static class WebSocketProtocol
 {
-    private const string HandshakeGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    private const string HANDSHAKE_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    private const byte FINAL_FRAGMENT = 0x80;
+    private const byte TEXT_OPCODE = 0x1;
+    private const byte BINARY_OPCODE = 0x2;
+    private const byte CLOSE_OPCODE = 0x8;
 
-    public static bool TryHandshake(NetworkStream stream)
+    public static bool TryHandshake(NetworkStream stream, out string path)
     {
+        path = "/";
         string request = ReadHttpHeaders(stream);
+
+        Match pathMatch = Regex.Match(request, @"^GET\s+(\S+)\s+HTTP", RegexOptions.IgnoreCase);
+        if (pathMatch.Success)
+        {
+            path = NormalizePath(pathMatch.Groups[1].Value);
+        }
+
         Match keyMatch = Regex.Match(request, @"Sec-WebSocket-Key:\s*(\S+)", RegexOptions.IgnoreCase);
         if (!keyMatch.Success) return false;
 
         string acceptKey;
         using (var sha1 = SHA1.Create())
         {
-            byte[] hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(keyMatch.Groups[1].Value + HandshakeGuid));
+            byte[] hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(keyMatch.Groups[1].Value + HANDSHAKE_GUID));
             acceptKey = Convert.ToBase64String(hash);
         }
 
@@ -30,30 +42,55 @@ public static class WebSocketProtocol
         return true;
     }
 
+    public static string NormalizePath(string rawPath)
+    {
+        int query = rawPath.IndexOf('?');
+        if (query >= 0) rawPath = rawPath.Substring(0, query);
+        if (rawPath.Length > 1) rawPath = rawPath.TrimEnd('/');
+        return rawPath.Length == 0 ? "/" : rawPath.ToLowerInvariant();
+    }
+
     public static byte[] EncodeTextFrame(string text)
     {
-        byte[] payload = Encoding.UTF8.GetBytes(text);
-        byte[] frame;
+        return EncodeFrame(TEXT_OPCODE, Encoding.UTF8.GetBytes(text));
+    }
 
-        if (payload.Length < 126)
+    public static byte[] EncodeBinaryFrame(byte[] payload)
+    {
+        return EncodeFrame(BINARY_OPCODE, payload);
+    }
+
+    public static bool IsCloseFrame(byte firstByte) => (firstByte & 0x0F) == CLOSE_OPCODE;
+
+    private static byte[] EncodeFrame(byte opcode, byte[] payload)
+    {
+        int headerLength = payload.Length < 126 ? 2 : payload.Length <= ushort.MaxValue ? 4 : 10;
+        var frame = new byte[headerLength + payload.Length];
+        frame[0] = (byte)(FINAL_FRAGMENT | opcode);
+
+        if (headerLength == 2)
         {
-            frame = new byte[2 + payload.Length];
             frame[1] = (byte)payload.Length;
         }
-        else
+        else if (headerLength == 4)
         {
-            frame = new byte[4 + payload.Length];
             frame[1] = 126;
             frame[2] = (byte)(payload.Length >> 8);
             frame[3] = (byte)payload.Length;
         }
+        else
+        {
+            frame[1] = 127;
+            ulong length = (ulong)payload.Length;
+            for (int i = 0; i < 8; i++)
+            {
+                frame[2 + i] = (byte)(length >> (8 * (7 - i)));
+            }
+        }
 
-        frame[0] = 0x81;
-        Buffer.BlockCopy(payload, 0, frame, frame.Length - payload.Length, payload.Length);
+        Buffer.BlockCopy(payload, 0, frame, headerLength, payload.Length);
         return frame;
     }
-
-    public static bool IsCloseFrame(byte firstByte) => (firstByte & 0x0F) == 0x8;
 
     private static string ReadHttpHeaders(NetworkStream stream)
     {

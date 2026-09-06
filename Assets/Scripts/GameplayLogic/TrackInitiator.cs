@@ -78,6 +78,11 @@ public class TrackInitiator : MonoBehaviour
                     StretchToDepth(go, cellDepth);
                 }
 
+                if (cell.Type == ObsticleType.Blockade && ContinuesPreviousObstacle(set, x, y))
+                {
+                    DisableFrontWalls(go);
+                }
+
                 go.transform.localPosition = new Vector3(laneLocal.x, laneLocal.y + 1, zLocal);
 
                 float topY = GetTopLocalY(go) + CoinSurfaceYOffset;
@@ -161,6 +166,27 @@ public class TrackInitiator : MonoBehaviour
             }
 
         return count;
+    }
+
+    private static bool ContinuesPreviousObstacle(ObsticleSetSO set, int x, int y)
+    {
+        for (int back = 1; back <= ObsticleSetSO.MaxBlockadeLength; back++)
+        {
+            ObstacleCell previous = set.GetCell(x, y - back);
+
+            if (previous.Type == ObsticleType.Ramp) return back == 1;
+            if (previous.Type == ObsticleType.Blockade) return previous.BlockadeLength >= back;
+        }
+
+        return false;
+    }
+
+    private static void DisableFrontWalls(GameObject obstacle)
+    {
+        foreach (FrontWallCollisionDetector wall in obstacle.GetComponentsInChildren<FrontWallCollisionDetector>())
+        {
+            wall.gameObject.SetActive(false);
+        }
     }
 
     private float GetTopLocalY(GameObject go)

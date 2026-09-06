@@ -79,3 +79,9 @@ crashlytics-build.properties
 .LSOverride
 *.vscode/
 Assets/Settings/Mobile_RPAsset.asset
+
+# Pose model tooling
+/Tools/**/venv/
+/Tools/**/__pycache__/
+/Tools/**/*.pt
+/Tools/**/*.onnx

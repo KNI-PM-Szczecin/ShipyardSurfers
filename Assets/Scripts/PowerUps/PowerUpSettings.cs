@@ -10,7 +10,7 @@ public static class PowerUpSettings
     public const float SUPER_JUMP_DURATION = 8f;
     public const float DOUBLE_POINTS_DURATION = 10f;
 
-    public const float MAGNET_RANGE_IN_CELLS = 1f;
+    public const float MAGNET_RANGE_IN_CELLS = 2f;
     public const float MAGNET_RANGE_MARGIN = 0.5f;
     public const float MAGNET_VERTICAL_RANGE = 3f;
     public const float MAGNET_MIN_PULL_SPEED = 10f;
