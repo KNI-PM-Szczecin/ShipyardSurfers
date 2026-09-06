@@ -445,10 +445,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 330585543}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8efedf1471c50684eb0c23c6250d0c0d, type: 3}
+  m_Script: {fileID: 11500000, guid: 23f7172c8e760414d82d0328fb6b28e1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NormalsReplacementShader
-  normalsShader: {fileID: 4800000, guid: 10d5bc6ab4f8e664c90702f04480b516, type: 3}
+  normalsShader: {fileID: 4800000, guid: f7ba3849696e25a41be499e87370b735, type: 3}
 --- !u!114 &330585550
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -458,10 +458,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 330585543}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f46e8a8274b72bf4e8a6673cfc2a67e5, type: 3}
+  m_Script: {fileID: 11500000, guid: 2ac26261e28b7044ebc2481b9b3391e6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraDepthTextureMode
-  depthTextureMode: 1
+  depthTextureMode: 0
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0

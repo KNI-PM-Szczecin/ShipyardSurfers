@@ -1,4 +1,4 @@
-﻿Shader "Assist/Normals"
+﻿Shader "Hidden/Normals"
 {
     Properties
     {
