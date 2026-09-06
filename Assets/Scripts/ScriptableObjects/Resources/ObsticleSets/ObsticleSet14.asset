@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 62531ee43f08ee74eb6c2690e24652e7, type: 3}
-  m_Name: ObsticleSet2
+  m_Name: ObsticleSet14
   m_EditorClassIdentifier: Assembly-CSharp::ObsticleSetSO
   Grid:
   - Type: 0
@@ -24,28 +24,34 @@ MonoBehaviour:
     HasCoin: 0
   - Type: 0
     BlockadeLength: 1
-    HasCoin: 1
-  - Type: 0
-    BlockadeLength: 1
     HasCoin: 0
   - Type: 0
     BlockadeLength: 1
     HasCoin: 1
-  - Type: 3
-    BlockadeLength: 3
-    HasCoin: 0
   - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 1
     BlockadeLength: 1
     HasCoin: 0
   - Type: 0
     BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
+    HasCoin: 1
+  - Type: 1
     BlockadeLength: 1
     HasCoin: 0
   - Type: 2
     BlockadeLength: 1
+    HasCoin: 0
+  - Type: 0
+    BlockadeLength: 1
     HasCoin: 1
+  - Type: 2
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
   - Type: 0
     BlockadeLength: 1
     HasCoin: 0
@@ -57,31 +63,7 @@ MonoBehaviour:
     HasCoin: 0
   - Type: 1
     BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 3
-    BlockadeLength: 3
-    HasCoin: 0
-  - Type: 1
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
     HasCoin: 0
@@ -103,6 +85,45 @@ MonoBehaviour:
   - Type: 0
     BlockadeLength: 1
     HasCoin: 0
+  - Type: 3
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 3
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 1
+    BlockadeLength: 1
+    HasCoin: 1
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 2
+    BlockadeLength: 1
+    HasCoin: 1
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 2
+    BlockadeLength: 1
+    HasCoin: 1
+  - Type: 1
+    BlockadeLength: 1
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
     HasCoin: 0
@@ -127,13 +148,37 @@ MonoBehaviour:
   - Type: 0
     BlockadeLength: 1
     HasCoin: 0
-  - Type: 3
-    BlockadeLength: 2
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 1
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 1
+  - Type: 0
+    BlockadeLength: 1
     HasCoin: 0
   - Type: 0
     BlockadeLength: 1
     HasCoin: 0
   - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 1
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 1
+    BlockadeLength: 1
+    HasCoin: 1
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 2
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 2
     BlockadeLength: 1
     HasCoin: 1
   - Type: 0
@@ -161,25 +206,7 @@ MonoBehaviour:
     BlockadeLength: 1
     HasCoin: 0
   - Type: 3
-    BlockadeLength: 3
-    HasCoin: 1
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 2
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 1
-  - Type: 2
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
+    BlockadeLength: 2
     HasCoin: 1
   - Type: 0
     BlockadeLength: 1
@@ -188,33 +215,6 @@ MonoBehaviour:
     BlockadeLength: 1
     HasCoin: 0
   - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 1
-    BlockadeLength: 1
-    HasCoin: 1
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 1
-    BlockadeLength: 1
-    HasCoin: 1
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 2
     BlockadeLength: 1
     HasCoin: 1
   - Type: 0

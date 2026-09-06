@@ -19,7 +19,7 @@ public class MovmentController : MonoBehaviour
     [SerializeField] private Transform[] _trackTransforms;
 
     [Header("Track changing")]
-    [SerializeField] private float _trackChangeDuration = 0.3f;
+    [SerializeField] private float _trackChangeDuration = 0.12f;
     [SerializeField] private float _wallBounceDuration = 0.15f;
     [SerializeField, Tooltip("Hitting a side wall again within this many seconds after a bounce kills the player.")]
     private float _stumbleDuration = 1f;
@@ -32,9 +32,14 @@ public class MovmentController : MonoBehaviour
     [SerializeField] private float _fallSpeed = 1f;
     [SerializeField, Tooltip("A flat surface at most this far above the player still counts as ground to land on.")]
     private float _landTolerance = 0.5f;
+    [SerializeField, Tooltip("A jump pressed this many seconds before landing still triggers on touchdown.")]
+    private float _jumpBufferDuration = 0.15f;
 
     [Header("Roll")]
-    [SerializeField] private float _rollDuration = 0.3f;
+    [SerializeField, Tooltip("Time to crouch down and, separately, to stand back up.")]
+    private float _rollDuration = 0.12f;
+    [SerializeField, Tooltip("Time spent fully crouched between going down and standing up.")]
+    private float _rollHoldDuration = 0.45f;
     [SerializeField] private float _rollHeight = -0.5f;
     [SerializeField] private float _rollFallMultiplier = 2f;
 
@@ -46,17 +51,21 @@ public class MovmentController : MonoBehaviour
     [SerializeField] private float _groundProbeForwardOffset = 1f;
     [SerializeField] private float _stepTolerance = 0.05f;
 
-    private const float TrackSnapEpsilon = 0.1f;
-    private const float DefaultLaneWidth = 3f;
+    private const float TRACK_SNAP_EPSILON = 0.1f;
+    private const float DEFAULT_LANE_WIDTH = 3f;
+    private const float LANE_INPUT_THRESHOLD = 0.5f;
 
     public float JumpHeightMultiplier { get; set; } = 1f;
-    public float LaneWidth { get; private set; } = DefaultLaneWidth;
+    public float LaneWidth { get; private set; } = DEFAULT_LANE_WIDTH;
 
     private InputAction _moveAction;
     private Rigidbody _rigidbody;
     private GroundProbe _groundProbe;
+    private readonly InputBuffer _jumpBuffer = new InputBuffer();
+    private RollProfile _rollProfile;
 
     private int _activeTrack;
+    private int _lastLaneInputDirection;
     private bool _trackChangeLock;
     private bool _lastChangeIncrement;
     private float _stumbleEndTime;
@@ -132,9 +141,20 @@ public class MovmentController : MonoBehaviour
 
     private void HandleLaneInput(float horizontal)
     {
-        if (horizontal == 0f || _trackChangeLock) return;
+        int direction = ReadLaneDirection(horizontal);
+        bool pressed = direction != 0 && direction != _lastLaneInputDirection;
+        _lastLaneInputDirection = direction;
 
-        ChangeTrack(horizontal > 0f, _trackChangeDuration);
+        if (!pressed) return;
+
+        ChangeTrack(direction > 0, _trackChangeDuration);
+    }
+
+    private static int ReadLaneDirection(float horizontal)
+    {
+        if (horizontal >= LANE_INPUT_THRESHOLD) return 1;
+        if (horizontal <= -LANE_INPUT_THRESHOLD) return -1;
+        return 0;
     }
 
     private void ChangeTrack(bool increment, float duration, bool isBounce = false)
@@ -167,7 +187,7 @@ public class MovmentController : MonoBehaviour
         for (int i = 0; i < _trackTransforms.Length; i++)
         {
             float delta = _trackTransforms[i].position.x - x;
-            if (increment ? delta <= TrackSnapEpsilon : delta >= -TrackSnapEpsilon) continue;
+            if (increment ? delta <= TRACK_SNAP_EPSILON : delta >= -TRACK_SNAP_EPSILON) continue;
 
             float distance = Mathf.Abs(delta);
             if (distance < closestDistance)
@@ -268,8 +288,19 @@ public class MovmentController : MonoBehaviour
     private void TryStartJump()
     {
         if (_verticalState == VerticalState.Rolling) EndRoll();
-        if (_verticalState != VerticalState.Grounded) return;
 
+        if (_verticalState != VerticalState.Grounded)
+        {
+            _jumpBuffer.Press(Time.time);
+            return;
+        }
+
+        StartJump();
+    }
+
+    private void StartJump()
+    {
+        _jumpBuffer.Clear();
         _jumpStartY = transform.position.y;
         _jumpElapsed = 0f;
         _verticalState = VerticalState.Jumping;
@@ -350,14 +381,20 @@ public class MovmentController : MonoBehaviour
         _fallSpeedMultiplier = 1f;
         _verticalState = VerticalState.Grounded;
 
-        if (!_rollQueued) return;
+        if (_rollQueued)
+        {
+            _rollQueued = false;
+            _jumpBuffer.Clear();
+            if (!hit.IsSlope) StartRoll();
+            return;
+        }
 
-        _rollQueued = false;
-        if (!hit.IsSlope) StartRoll();
+        if (_jumpBuffer.TryConsume(Time.time, _jumpBufferDuration)) StartJump();
     }
 
     private void StartRoll()
     {
+        _rollProfile = new RollProfile(_rollDuration, _rollHoldDuration, _rollHeight);
         _standingY = transform.position.y;
         _rollElapsed = 0f;
         _verticalState = VerticalState.Rolling;
@@ -385,22 +422,13 @@ public class MovmentController : MonoBehaviour
         _standingY = hit.StandingY;
         _rollElapsed += deltaTime;
 
-        if (_rollElapsed >= _rollDuration * 2f)
+        if (_rollElapsed >= _rollProfile.TotalDuration)
         {
             EndRoll();
             return;
         }
 
-        SetY(_standingY + RollOffset(_rollElapsed));
-    }
-
-    private float RollOffset(float elapsed)
-    {
-        float t = elapsed < _rollDuration
-            ? elapsed / _rollDuration
-            : 2f - elapsed / _rollDuration;
-
-        return _rollHeight * Mathf.Clamp01(t);
+        SetY(_standingY + _rollProfile.Evaluate(_rollElapsed));
     }
 
     private void EndRoll()

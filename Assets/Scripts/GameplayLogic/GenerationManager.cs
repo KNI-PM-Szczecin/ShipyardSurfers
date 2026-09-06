@@ -36,10 +36,10 @@ public class GenerationManager
         if (list == null || list.Count == 0) return null;
         if (list.Count == 1) return list[0];
 
-        int count = list.Count;
-        int randomIndex = Random.Range(0, count - 1);
+        bool hasPrevious = lastIndex >= 0;
+        int randomIndex = Random.Range(0, hasPrevious ? list.Count - 1 : list.Count);
 
-        if (randomIndex >= lastIndex && lastIndex != -1)
+        if (hasPrevious && randomIndex >= lastIndex)
         {
             randomIndex++;
         }
