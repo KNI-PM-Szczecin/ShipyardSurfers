@@ -5,13 +5,14 @@ using UnityEngine.UI;
 
 public class MotionControlSettingsPanel : MonoBehaviour
 {
-    private const string NO_CAMERAS_OPTION = "brak kamer";
-    private const string NO_SERVICE_STATUS = "sterowanie kamera niedostepne";
+    private const string NO_CAMERAS_OPTION = "Brak kamer";
+    private const string NO_SERVICE_STATUS = "Sterowanie kamerą niedostępne";
 
     [SerializeField] private Toggle _enabledToggle;
     [SerializeField] private TMP_Dropdown _cameraDropdown;
     [SerializeField] private Toggle _mirrorToggle;
     [SerializeField] private TMP_Text _statusLabel;
+    [SerializeField] private Image _statusIndicator;
 
     private IMotionControlSettings _settings;
     private Observable<TrackingState> _state;
@@ -22,7 +23,7 @@ public class MotionControlSettingsPanel : MonoBehaviour
         MotionControlService service = MotionControlService.Instance;
         if (service == null || service.Settings == null)
         {
-            SetStatus(NO_SERVICE_STATUS);
+            SetStatus(NO_SERVICE_STATUS, TrackingStatePresentation.UnavailableColor);
             SetInteractable(false);
             return;
         }
@@ -90,12 +91,13 @@ public class MotionControlSettingsPanel : MonoBehaviour
 
     private void OnStateChanged(TrackingState state)
     {
-        SetStatus(StatusText(state));
+        SetStatus(TrackingStatePresentation.Text(state), TrackingStatePresentation.Color(state));
     }
 
-    private void SetStatus(string text)
+    private void SetStatus(string text, Color color)
     {
         if (_statusLabel != null) _statusLabel.text = text;
+        if (_statusIndicator != null) _statusIndicator.color = color;
     }
 
     private void SetInteractable(bool interactable)
@@ -103,18 +105,5 @@ public class MotionControlSettingsPanel : MonoBehaviour
         _enabledToggle.interactable = interactable;
         _cameraDropdown.interactable = interactable;
         _mirrorToggle.interactable = interactable;
-    }
-
-    private static string StatusText(TrackingState state)
-    {
-        switch (state)
-        {
-            case TrackingState.Disabled: return "sterowanie kamera wylaczone";
-            case TrackingState.NoCamera: return "brak obrazu z kamery";
-            case TrackingState.Searching: return "szukam gracza...";
-            case TrackingState.Tracking: return "sledzenie aktywne";
-            case TrackingState.Lost: return "zgubiono gracza";
-            default: return string.Empty;
-        }
     }
 }

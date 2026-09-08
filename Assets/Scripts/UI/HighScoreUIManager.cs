@@ -1,39 +1,28 @@
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 
 public class HighScoreUIManager : MonoBehaviour
 {
-    public GameObject HighScorePrefab;
-    public Transform HighScorePanel;
+    private const int DEFAULT_ROW_COUNT = 10;
+
+    [SerializeField] private ScoreboardEntryView _entryPrefab;
+    [SerializeField] private Transform _container;
+    [SerializeField] private int _rowCount = DEFAULT_ROW_COUNT;
 
     private void Awake()
     {
-        List<HighScoreEntry> highScoreList = HighScoreManager.GetHighScores(); 
-        print(highScoreList);
-        generateScoreboard(highScoreList);
+        Populate(HighScoreManager.GetHighScores());
     }
 
-    private void generateScoreboard(List<HighScoreEntry> highScoreList)
+    public void Populate(List<HighScoreEntry> highScores)
     {
-        for (int i = 0; i < 10; i++)
+        if (_entryPrefab == null || _container == null) return;
+
+        for (int i = 0; i < _rowCount; i++)
         {
-            if (i < highScoreList.Count)
-            {
-                generateSegment(highScoreList[i], i);
-            }
-            else
-            {
-                generateSegment(new HighScoreEntry { Name = "---", Score = 0 }, i);
-            }
+            HighScoreEntry entry = i < highScores.Count ? highScores[i] : default;
+            ScoreboardEntryView view = Instantiate(_entryPrefab, _container);
+            view.Bind(i + 1, entry);
         }
-    }
-
-    private void generateSegment(HighScoreEntry entry, int position)
-    {
-        GameObject newEntry = Instantiate(HighScorePrefab, HighScorePanel);
-        newEntry.transform.Find("Score").GetComponent<TMP_Text>().text = Mathf.Round(entry.Score).ToString();
-        newEntry.transform.Find("Name").GetComponent<TMP_Text>().text = entry.Name;
-        newEntry.transform.Find("Position").GetComponent<TMP_Text>().text = (position+1).ToString() + ".";
     }
 }

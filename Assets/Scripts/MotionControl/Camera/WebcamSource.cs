@@ -4,6 +4,8 @@ public class WebcamSource : ICameraSource
 {
     private const int PLACEHOLDER_SIZE = 16;
 
+    private static string[] _cachedDeviceNames;
+
     private readonly int _requestedWidth;
     private readonly int _requestedHeight;
     private readonly int _requestedFps;
@@ -32,12 +34,16 @@ public class WebcamSource : ICameraSource
         _texture.Play();
     }
 
-    public static string[] DeviceNames()
+    public static string[] DeviceNames(bool refresh = false)
     {
-        WebCamDevice[] devices = WebCamTexture.devices;
-        var names = new string[devices.Length];
-        for (int i = 0; i < devices.Length; i++) names[i] = devices[i].name;
-        return names;
+        if (_cachedDeviceNames == null || refresh)
+        {
+            WebCamDevice[] devices = WebCamTexture.devices;
+            _cachedDeviceNames = new string[devices.Length];
+            for (int i = 0; i < devices.Length; i++) _cachedDeviceNames[i] = devices[i].name;
+        }
+
+        return (string[])_cachedDeviceNames.Clone();
     }
 
     public void Start(string deviceName)
@@ -78,17 +84,13 @@ public class WebcamSource : ICameraSource
 
     private static string ResolveDeviceName(string preferred)
     {
-        WebCamDevice[] devices = WebCamTexture.devices;
-        if (devices.Length == 0) return null;
-
-        if (!string.IsNullOrEmpty(preferred))
+        string[] devices = DeviceNames();
+        if (!string.IsNullOrEmpty(preferred) && System.Array.IndexOf(devices, preferred) < 0)
         {
-            foreach (WebCamDevice device in devices)
-            {
-                if (device.name == preferred) return device.name;
-            }
+            devices = DeviceNames(true);
         }
 
-        return devices[0].name;
+        if (devices.Length == 0) return null;
+        return System.Array.IndexOf(devices, preferred) >= 0 ? preferred : devices[0];
     }
 }

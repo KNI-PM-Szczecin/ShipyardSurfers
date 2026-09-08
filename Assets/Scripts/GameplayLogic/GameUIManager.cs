@@ -29,7 +29,7 @@ public class GameUIManager : MonoBehaviour
     {
         if (ScoreText == null) { return; }
 
-        ScoreText.text = ((int)score).ToString();
+        ScoreText.text = ScoreFormatter.Format(score);
     }
 
     public void ShowDeathScreen()

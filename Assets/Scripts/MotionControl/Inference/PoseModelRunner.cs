@@ -18,12 +18,11 @@ public class PoseModelRunner : IDisposable
     public float LastInferenceMs { get; private set; }
     public bool IsIdle => _schedule == null && _pendingOutput == null;
 
-    public PoseModelRunner(ModelAsset modelAsset, int inputSize, int layersPerFrame, BackendType backend)
+    public PoseModelRunner(Model model, int inputSize, int layersPerFrame, BackendType backend)
     {
         InputSize = inputSize;
         _layersPerFrame = Mathf.Max(1, layersPerFrame);
 
-        Model model = ModelLoader.Load(modelAsset);
         _worker = new Worker(model, backend);
         _input = new Tensor<float>(new TensorShape(1, 3, inputSize, inputSize));
         _transform = new TextureTransform().SetCoordOrigin(CoordOrigin.TopLeft);

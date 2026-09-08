@@ -1,3 +1,6 @@
+using System.Collections;
+using System.Threading.Tasks;
+using Unity.InferenceEngine;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -14,12 +17,14 @@ public class MotionControlService : MonoBehaviour
     public Observable<TrackingState> State { get; } = new Observable<TrackingState>(TrackingState.Disabled);
     public IMotionControlSettings Settings { get; private set; }
     public MotionControlConfig Config => _config;
+    public bool IsApplyingSettings => _applyRoutine != null;
 
     [SerializeField] private MotionControlConfig _config;
 
     private WebcamSource _camera;
     private SquareCropBlitter _cropper;
     private PoseModelRunner _runner;
+    private Model _model;
     private YoloPoseDecoder _decoder;
     private PoseNormalizer _normalizer;
     private PoseSmoother _smoother;
@@ -33,6 +38,7 @@ public class MotionControlService : MonoBehaviour
     private readonly NormalizedPose _pose = new NormalizedPose();
     private readonly PoseDebugSnapshot _snapshot = new PoseDebugSnapshot();
 
+    private Coroutine _applyRoutine;
     private bool _pipelineActive;
     private int _resultsThisSecond;
     private float _fpsWindowStart;
@@ -70,7 +76,7 @@ public class MotionControlService : MonoBehaviour
 
         Settings = new PlayerPrefsMotionControlSettings();
         BuildPipeline();
-        Settings.Changed += ApplySettings;
+        Settings.Changed += ScheduleApplySettings;
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
@@ -85,7 +91,7 @@ public class MotionControlService : MonoBehaviour
 
     private void Start()
     {
-        if (Config != null) ApplySettings();
+        if (Config != null) ScheduleApplySettings();
     }
 
     private void BuildPipeline()
@@ -102,32 +108,85 @@ public class MotionControlService : MonoBehaviour
         _debugPublisher = new CameraDebugPublisher(Config.PreviewWidth, Config.PreviewHeight, Config.JpegQuality, Config.PreviewFps, Config.FlipPreviewVertically);
     }
 
-    private void ApplySettings()
+    private void ScheduleApplySettings()
+    {
+        if (_applyRoutine != null) StopCoroutine(_applyRoutine);
+        _applyRoutine = StartCoroutine(ApplySettingsRoutine());
+    }
+
+    private IEnumerator ApplySettingsRoutine()
     {
         _normalizer.Mirror = Settings.MirrorHorizontal;
 
         if (!Settings.Enabled)
         {
             StopPipeline();
-            return;
+            _applyRoutine = null;
+            yield break;
         }
+
+        yield return null;
 
         if (!_pipelineActive)
         {
-            StartPipeline();
+            yield return EnsureRunner();
+            if (_runner != null)
+            {
+                yield return null;
+                if (!Settings.Enabled)
+                {
+                    _applyRoutine = null;
+                    yield break;
+                }
+
+                StartPipeline();
+            }
         }
         else if (_camera.ActiveDeviceName != Settings.CameraName && !string.IsNullOrEmpty(Settings.CameraName))
         {
+            _camera.Stop();
+            _tracking.NotifyCameraStarted(Time.unscaledTime);
+            yield return null;
             _camera.Start(Settings.CameraName);
             ResetRecognition();
+            Debug.Log($"{nameof(MotionControlService)}: camera switched to '{_camera.ActiveDeviceName ?? "none"}'", this);
         }
+
+        _applyRoutine = null;
+    }
+
+    private IEnumerator EnsureRunner()
+    {
+        if (_runner != null) yield break;
+
+        if (_model == null)
+        {
+            ModelAsset asset = Config.Model;
+            if (asset == null)
+            {
+                Debug.LogError($"{nameof(MotionControlService)}: no pose model assigned in {nameof(MotionControlConfig)}", this);
+                yield break;
+            }
+
+            Task<Model> load = PoseModelLoader.LoadAsync(asset);
+            while (!load.IsCompleted) yield return null;
+
+            if (load.Status == TaskStatus.RanToCompletion && load.Result != null)
+            {
+                _model = load.Result;
+            }
+            else
+            {
+                Debug.LogWarning($"{nameof(MotionControlService)}: background model load failed, loading on main thread ({load.Exception?.GetBaseException().Message})", this);
+                _model = ModelLoader.Load(asset);
+            }
+        }
+
+        _runner = new PoseModelRunner(_model, Config.InputSize, Config.LayersPerFrame, Config.Backend);
     }
 
     private void StartPipeline()
     {
-        ModelAssetGuard();
-        if (_runner == null) return;
-
         _camera.Start(Settings.CameraName);
         _emitter.Attach();
         _tracking.Enable(Time.unscaledTime);
@@ -140,18 +199,10 @@ public class MotionControlService : MonoBehaviour
         Debug.Log($"{nameof(MotionControlService)}: pipeline started, camera '{_camera.ActiveDeviceName ?? "none"}'", this);
     }
 
-    private void ModelAssetGuard()
+    private void RebuildRunner()
     {
-        if (_runner != null) return;
-
-        var model = Config.Model;
-        if (model == null)
-        {
-            Debug.LogError($"{nameof(MotionControlService)}: no pose model assigned in {nameof(MotionControlConfig)}", this);
-            return;
-        }
-
-        _runner = new PoseModelRunner(model, Config.InputSize, Config.LayersPerFrame, Config.Backend);
+        _runner?.Dispose();
+        _runner = _model != null ? new PoseModelRunner(_model, Config.InputSize, Config.LayersPerFrame, Config.Backend) : null;
     }
 
     private void StopPipeline()
@@ -178,7 +229,7 @@ public class MotionControlService : MonoBehaviour
 
     private void Update()
     {
-        if (!_pipelineActive) return;
+        if (!_pipelineActive || _runner == null) return;
 
         float now = Time.unscaledTime;
         bool frameArrived = _camera.TryConsumeFrame();
@@ -241,16 +292,14 @@ public class MotionControlService : MonoBehaviour
             return;
         }
 
-        _runner.Dispose();
-        _runner = null;
-        ModelAssetGuard();
+        RebuildRunner();
         _inferenceTimeouts = 0;
         Debug.LogWarning($"{nameof(MotionControlService)}: inference stalled repeatedly, worker rebuilt", this);
     }
 
     private void RecoverStalledCamera(float now)
     {
-        if (now < _nextCameraRestart) return;
+        if (now < _nextCameraRestart || IsApplyingSettings) return;
 
         if (_camera.HasTexture && !_camera.IsRunning)
         {
@@ -313,7 +362,7 @@ public class MotionControlService : MonoBehaviour
     {
         if (Instance != this) return;
 
-        if (Settings != null) Settings.Changed -= ApplySettings;
+        if (Settings != null) Settings.Changed -= ScheduleApplySettings;
         SceneManager.sceneLoaded -= OnSceneLoaded;
         StopPipeline();
         _camera?.Dispose();

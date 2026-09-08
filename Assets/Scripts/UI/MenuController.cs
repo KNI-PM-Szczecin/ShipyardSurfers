@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -9,8 +10,9 @@ public class MenuController : MonoBehaviour
 {
     [SerializeField]
     private Button _startGameButton;
+    [FormerlySerializedAs("_settignsButton")]
     [SerializeField]
-    private Button _settignsButton;
+    private Button _settingsButton;
     [SerializeField]
     private Button _quitButton;
     [SerializeField]
@@ -40,7 +42,7 @@ public class MenuController : MonoBehaviour
 #endif
     }
 
-    private bool areReferencesNotValid => _startGameButton == null || _settignsButton == null || _quitButton == null || _closeSettingsButton == null;
+    private bool areReferencesNotValid => _startGameButton == null || _settingsButton == null || _quitButton == null || _closeSettingsButton == null;
 
     private void Awake()
     {
@@ -51,7 +53,7 @@ public class MenuController : MonoBehaviour
         }
 
         _startGameButton.onClick.AddListener(startGame);
-        _settignsButton.onClick.AddListener(openSettings);
+        _settingsButton.onClick.AddListener(openSettings);
         _quitButton.onClick.AddListener(quitGame);
         _closeSettingsButton.onClick.AddListener(closeSettings);
 
@@ -92,7 +94,7 @@ public class MenuController : MonoBehaviour
         if (areReferencesNotValid) { return; }
 
         _startGameButton.onClick.RemoveListener(startGame);
-        _settignsButton.onClick.RemoveListener(openSettings);
+        _settingsButton.onClick.RemoveListener(openSettings);
         _quitButton.onClick.RemoveListener(quitGame);
         _closeSettingsButton.onClick.RemoveListener(closeSettings);
     }
