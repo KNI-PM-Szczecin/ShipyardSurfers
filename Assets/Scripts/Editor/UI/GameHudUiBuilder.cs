@@ -236,7 +236,7 @@ public static class GameHudUiBuilder
         UiFactory.AutoSize(score, 64f, 112f);
         UiFactory.Layout(score, -1f, 124f);
 
-        TextMeshProUGUI bestScore = BuildBestRow(f, card);
+        BestRowWidgets best = BuildBestRow(f, card);
         RectTransform newRecordBadge = BuildNewRecordBadge(f, card);
         f.Spacer(card, 8f);
 
@@ -272,7 +272,10 @@ public static class GameHudUiBuilder
         var manager = death.gameObject.AddComponent<DeathUIManager>();
         UiWiring.Set(manager,
             ("_scoreText", score),
-            ("_bestScoreText", bestScore),
+            ("_bestRow", best.Row.gameObject),
+            ("_bestCaptionText", best.Caption),
+            ("_bestNameText", best.HolderName),
+            ("_bestScoreText", best.Score),
             ("_newRecordBadge", newRecordBadge.gameObject),
             ("_actionsRow", actions.gameObject),
             ("_scoreSavePanel", savePanel.gameObject),
@@ -290,7 +293,23 @@ public static class GameHudUiBuilder
         return death;
     }
 
-    private static TextMeshProUGUI BuildBestRow(UiFactory f, RectTransform parent)
+    private readonly struct BestRowWidgets
+    {
+        public readonly RectTransform Row;
+        public readonly TextMeshProUGUI Caption;
+        public readonly TextMeshProUGUI HolderName;
+        public readonly TextMeshProUGUI Score;
+
+        public BestRowWidgets(RectTransform row, TextMeshProUGUI caption, TextMeshProUGUI holderName, TextMeshProUGUI score)
+        {
+            Row = row;
+            Caption = caption;
+            HolderName = holderName;
+            Score = score;
+        }
+    }
+
+    private static BestRowWidgets BuildBestRow(UiFactory f, RectTransform parent)
     {
         RectTransform row = f.Rect(parent, "BestRow");
         UiFactory.Layout(row, -1f, 30f);
@@ -302,7 +321,10 @@ public static class GameHudUiBuilder
         TextMeshProUGUI caption = f.Caption(row, "Caption", "Rekord", UiTheme.TextDim, 16f);
         caption.alignment = TextAlignmentOptions.Center;
 
-        return f.Text(row, "BestScoreText", "0", f.Assets.BodyBold, 22f, UiTheme.White, TextAlignmentOptions.Center);
+        TextMeshProUGUI holderName = f.Text(row, "BestNameText", "---", f.Assets.BodyMedium, 22f, UiTheme.TextMuted, TextAlignmentOptions.Center);
+        TextMeshProUGUI score = f.Text(row, "BestScoreText", "0", f.Assets.BodyBold, 22f, UiTheme.White, TextAlignmentOptions.Center);
+
+        return new BestRowWidgets(row, caption, holderName, score);
     }
 
     private static RectTransform BuildNewRecordBadge(UiFactory f, RectTransform parent)

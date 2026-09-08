@@ -1,0 +1,340 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb71eed7db3cbc44fa436090facda945, type: 3}
+  m_Name: TrackApperencePirate
+  m_EditorClassIdentifier: Assembly-CSharp::TrackApperenceSO
+  Track: {fileID: 0}
+  JumpPrefab: {fileID: 2661567191756024254, guid: bad10ca69c7458444af58be15ca668f1, type: 3}
+  SlidePrefab: {fileID: 1248911548226924992, guid: 896fa1f3565231142b71fc87111ad834, type: 3}
+  BlockadePrefab: {fileID: 2473662174729351707, guid: b03738f8142eae54f8d5725cb41676d7, type: 3}
+  BlockadeVariants:
+  - Prefab: {fileID: 4491502324950242387, guid: 04f78f22db3c84948be094696e71c0d3, type: 3}
+    MinLength: 2
+  - Prefab: {fileID: 4235121305978096497, guid: af7fb340f233ae34fa555492ca23db2f, type: 3}
+    MinLength: 2
+  - Prefab: {fileID: 8068362836237881261, guid: 39c201c4c3a24734db57603c9abd2dc2, type: 3}
+    MinLength: 2
+  - Prefab: {fileID: 8311419696091940212, guid: 8c9222e13335cd74788e7bd46a6978b4, type: 3}
+    MinLength: 2
+  RampPrefab: {fileID: 6949360218468026891, guid: 41e1aa4ad7e5fc24382762252cbd3089, type: 3}
+  CoinPrefab: {fileID: 9106078611208177907, guid: 7e2d395664323484098030edf6d3f61f, type: 3}
+  CoinMagnetPrefab: {fileID: 7381120945112233001, guid: 7cc336775c3b10cd3daa51a32caead25, type: 3}
+  SuperJumpPrefab: {fileID: 7381120945112233101, guid: b446f816a5fbe3cb297addec9a782530, type: 3}
+  DoublePointsPrefab: {fileID: 7381120945112233201, guid: be936426d9174674ee41ed654a60924b, type: 3}
+  WallSegmentPrefabs:
+  - {fileID: 729485460561124141, guid: ca04756191fa8ae49a492eef14e39976, type: 3}
+  - {fileID: 6399879163770597942, guid: c260b1f40b707604e9ba40ea678048f5, type: 3}
+  - {fileID: 8985993273110848303, guid: f61ff65ceb0c3d44395e4d0a7baa0ed6, type: 3}
+  - {fileID: 7780220192399776542, guid: 305115d32eff3af4181a83777edbb0f7, type: 3}
+  - {fileID: 6494526505783096170, guid: 1eab8590cd1376a499565b5d173de3f7, type: 3}
+  - {fileID: 2902564659254436592, guid: 26d16bef10d66054796b3e4f29eb3ac6, type: 3}
+  WallOffset: 5.5
+  BackdropProps:
+  - Prefab: {fileID: 2910802124356296005, guid: 6603aed73dda0b84db16f91726ac9204, type: 3}
+    MinDistance: 0
+    MaxDistance: 8
+    Weight: 3
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 3733997768269709624, guid: 79801c4a5e34dcf40b6f5f631b5edf47, type: 3}
+    MinDistance: 0
+    MaxDistance: 8
+    Weight: 3
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 3756215932172006637, guid: 14801e11d8fc4a8429dab0a223724fb7, type: 3}
+    MinDistance: 0
+    MaxDistance: 8
+    Weight: 2.5
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 3919398198361811168, guid: f2d7086e7f1db4647bee8885e940c943, type: 3}
+    MinDistance: 0
+    MaxDistance: 8
+    Weight: 2.5
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 5960634365803507299, guid: 9de08abac73f42c4cadfb64fd3c99003, type: 3}
+    MinDistance: 0
+    MaxDistance: 9
+    Weight: 3
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 5598617277720222030, guid: ce4f95ac2b3e16141a0ea42ce9108a8c, type: 3}
+    MinDistance: 0
+    MaxDistance: 9
+    Weight: 2
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 8505992691333054066, guid: 001feafd7aef12c47aad0b901cd1a001, type: 3}
+    MinDistance: 0
+    MaxDistance: 9
+    Weight: 2
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 3178947443233597170, guid: 1938ae8ae14304a4faa654206ecd0361, type: 3}
+    MinDistance: 0
+    MaxDistance: 8
+    Weight: 3
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 2403860018699027879, guid: dd70976d7f06ef64fbca399b03cfe5fb, type: 3}
+    MinDistance: 0
+    MaxDistance: 8
+    Weight: 3
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 6003151583925119815, guid: 5168540929eaab7409d11b340a21dcb3, type: 3}
+    MinDistance: 0
+    MaxDistance: 8
+    Weight: 2.5
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 1480144527236013056, guid: 400d5e9cb82d9f24585a4efa9a4a5476, type: 3}
+    MinDistance: 1
+    MaxDistance: 13
+    Weight: 2.5
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 2067881334305472898, guid: 22f41bf584cee8243b148341ab51bfa8, type: 3}
+    MinDistance: 1
+    MaxDistance: 13
+    Weight: 2.5
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 1017654609482016512, guid: 3e641cc73b53ddd4dbf040e9747f2a37, type: 3}
+    MinDistance: 1
+    MaxDistance: 13
+    Weight: 2.5
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 1548100026968172621, guid: 34509c92849c18f4ab0bf430a14954d5, type: 3}
+    MinDistance: 0.3
+    MaxDistance: 6
+    Weight: 1.5
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 324932070811880269, guid: ffd97e910a164924d936721831c6c7ed, type: 3}
+    MinDistance: 0.3
+    MaxDistance: 6
+    Weight: 1.5
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 2928943461842220280, guid: 58e1733391354a644b3025dc6d07a5a5, type: 3}
+    MinDistance: 0.3
+    MaxDistance: 6
+    Weight: 1
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 4529782661075287387, guid: 81ce0b138f3d6404189d65475ee981c2, type: 3}
+    MinDistance: 0.3
+    MaxDistance: 6
+    Weight: 1
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 6363945735859590961, guid: 24bc21f844cd70742b0795271fcb0ccb, type: 3}
+    MinDistance: 0.5
+    MaxDistance: 7
+    Weight: 0.8
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 5927682491488720387, guid: cc063ce24a4b5a549bda456f2652c52d, type: 3}
+    MinDistance: 0.5
+    MaxDistance: 6
+    Weight: 0.6
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 5900254768050825582, guid: 0d904c171826fcb4b9d954cff7c4727f, type: 3}
+    MinDistance: 1
+    MaxDistance: 14
+    Weight: 3
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 5350365768449446939, guid: 904f634973a511c4092fcdc926cefc0b, type: 3}
+    MinDistance: 1
+    MaxDistance: 14
+    Weight: 3
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 2893248983024998063, guid: 51adf624f8466c44489596aa5cbf8e8b, type: 3}
+    MinDistance: 2
+    MaxDistance: 16
+    Weight: 2.5
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 8923491802970828748, guid: dde887a6ee4b5ba44b8db0ec85834bea, type: 3}
+    MinDistance: 2
+    MaxDistance: 16
+    Weight: 2.5
+    RandomYaw: 1
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 6052433120855184032, guid: 2e744e8e6015af34b9d3aa92fed17b32, type: 3}
+    MinDistance: 0.3
+    MaxDistance: 8
+    Weight: 1.5
+    RandomYaw: 0
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 6075702326690868033, guid: c13dc5817b9f6bc49a12e59987d9e62d, type: 3}
+    MinDistance: 0.5
+    MaxDistance: 7
+    Weight: 1.2
+    RandomYaw: 0
+    YOffset: -0.4
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 8173198079662323483, guid: 3a4519ccc3289ff4ab95a515ef9c1e93, type: 3}
+    MinDistance: 2
+    MaxDistance: 13
+    Weight: 0.9
+    RandomYaw: 0
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 8348225044928631158, guid: 5183ff70d781e964a88c06af1c77042b, type: 3}
+    MinDistance: 4
+    MaxDistance: 18
+    Weight: 0.9
+    RandomYaw: 0
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 3684220375720544744, guid: fa189350f6d94c94999db0c9c59f12dd, type: 3}
+    MinDistance: 6
+    MaxDistance: 24
+    Weight: 0.7
+    RandomYaw: 0
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 5284042484204003326, guid: d06962451af04804aa1a4600e9769e12, type: 3}
+    MinDistance: 8
+    MaxDistance: 28
+    Weight: 0.7
+    RandomYaw: 0
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 2443522021249232894, guid: 33365204c6fbdcf49aea95de2cd0dd9c, type: 3}
+    MinDistance: 6
+    MaxDistance: 22
+    Weight: 0.9
+    RandomYaw: 0
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 4238267645147272093, guid: 3ba4dc8d6d3ebac4d971af19a9a966ac, type: 3}
+    MinDistance: 6
+    MaxDistance: 22
+    Weight: 0.7
+    RandomYaw: 0
+    YOffset: 0
+    ScaleMin: 0.8
+    ScaleMax: 1.25
+  - Prefab: {fileID: 5542860530580495361, guid: a779bacf82341bb428861e4359e98b02, type: 3}
+    MinDistance: 3
+    MaxDistance: 16
+    Weight: 1
+    RandomYaw: 0
+    YOffset: -0.5
+    ScaleMin: 0.9
+    ScaleMax: 1.15
+  - Prefab: {fileID: 1009970966298821834, guid: 524ba2ccd1974c548aff54c7495f05c9, type: 3}
+    MinDistance: 10
+    MaxDistance: 32
+    Weight: 0.9
+    RandomYaw: 0
+    YOffset: -1.2
+    ScaleMin: 0.9
+    ScaleMax: 1.15
+  - Prefab: {fileID: 2887398700114144280, guid: 55ece256f2745cd419c73ca4679a49b9, type: 3}
+    MinDistance: 10
+    MaxDistance: 32
+    Weight: 0.9
+    RandomYaw: 0
+    YOffset: -1.2
+    ScaleMin: 0.9
+    ScaleMax: 1.15
+  - Prefab: {fileID: 638220916428427761, guid: 526c8ea334b1abe4c8bc660d046ff3f7, type: 3}
+    MinDistance: 12
+    MaxDistance: 36
+    Weight: 0.8
+    RandomYaw: 0
+    YOffset: -1.5
+    ScaleMin: 0.9
+    ScaleMax: 1.15
+  - Prefab: {fileID: 5226742298395673459, guid: 91fb5e6eb51df0540843bea1b710a8ea, type: 3}
+    MinDistance: 12
+    MaxDistance: 36
+    Weight: 0.8
+    RandomYaw: 0
+    YOffset: -1.5
+    ScaleMin: 0.9
+    ScaleMax: 1.15
+  - Prefab: {fileID: 2913287543466868854, guid: ff071877bc1537749b6cd5dd2233624d, type: 3}
+    MinDistance: 16
+    MaxDistance: 38
+    Weight: 0.4
+    RandomYaw: 0
+    YOffset: -1.5
+    ScaleMin: 0.9
+    ScaleMax: 1.15
+  BackdropPasses: 3
+  BackdropSpacingMin: 3
+  BackdropSpacingMax: 6

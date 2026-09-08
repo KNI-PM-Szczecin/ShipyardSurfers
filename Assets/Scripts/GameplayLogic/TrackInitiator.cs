@@ -6,11 +6,18 @@ public class TrackInitiator : MonoBehaviour
     private const int COINS_PER_CELL = 3;
     private const float COIN_BASE_Y_OFFSET = 1f;
     private const float COIN_SURFACE_Y_OFFSET = 0.5f;
+    private const float COIN_UNDER_Y_OFFSET = 0.85f;
     private const float OBSTACLE_PIVOT_Y_OFFSET = 1f;
     private const float RAMP_OVERLAP = 0.15f;
+    private const float DEFAULT_TRACK_SPEED = 15f;
 
     public List<Transform> LaneCenters;
     public Renderer TrackRenderer;
+
+    [SerializeField, Tooltip("Plain wall renderers hidden when the picked appearance brings its own wall segments")]
+    private Renderer[] _defaultWallRenderers;
+
+    private readonly TrackDresser _dresser = new TrackDresser();
 
     private void Start() => BuildTrack();
 
@@ -39,11 +46,26 @@ public class TrackInitiator : MonoBehaviour
 
         CoinPath[,] coinPaths = PlaceObstacles(set, look, cols, cellDepth, zNearLocal);
         PlaceCoins(set, look, cols, cellDepth, zNearLocal, coinPaths);
+        DressTrack(look, zNearLocal, zFarLocal);
+    }
+
+    private void DressTrack(TrackApperenceSO look, float zNearLocal, float zFarLocal)
+    {
+        float floorLocalY = transform.InverseTransformPoint(new Vector3(0f, TrackRenderer.bounds.max.y, 0f)).y;
+        _dresser.Dress(transform, look, floorLocalY, zNearLocal, zFarLocal);
+
+        if (!look.HasWallSegments || _defaultWallRenderers == null) return;
+
+        foreach (Renderer wall in _defaultWallRenderers)
+        {
+            if (wall != null) wall.enabled = false;
+        }
     }
 
     private CoinPath[,] PlaceObstacles(ObsticleSetSO set, TrackApperenceSO look, int cols, float cellDepth, float zNearLocal)
     {
         CoinPath[,] coinPaths = CreateGroundCoinPaths(cols);
+        var claimed = new bool[cols, ObsticleSetSO.ROWS];
 
         for (int y = 0; y < ObsticleSetSO.ROWS; y++)
             for (int x = 0; x < cols; x++)
@@ -51,7 +73,9 @@ public class TrackInitiator : MonoBehaviour
                 ObstacleCell cell = set.GetCell(x, y);
                 if (cell.Type == ObsticleType.Empty) continue;
 
-                GameObject prefab = look.GetObsticlePrefab(cell.Type);
+                GameObject prefab = cell.Type == ObsticleType.Blockade
+                    ? look.GetBlockadePrefab(cell.BlockadeLength)
+                    : look.GetObsticlePrefab(cell.Type);
                 if (prefab == null || LaneCenters[x] == null) continue;
 
                 Vector3 laneLocal = transform.InverseTransformPoint(LaneCenters[x].position);
@@ -71,7 +95,7 @@ public class TrackInitiator : MonoBehaviour
                         break;
                 }
 
-                RegisterCoinPath(coinPaths, cell, x, y, obstacle, laneLocal.y, cellNearZ, cellDepth);
+                RegisterCoinPath(coinPaths, claimed, cell, x, y, obstacle, laneLocal.y, cellNearZ, cellDepth, zNearLocal);
             }
 
         return coinPaths;
@@ -99,7 +123,9 @@ public class TrackInitiator : MonoBehaviour
     private void PlaceBlockade(GameObject blockade, ObsticleSetSO set, ObstacleCell cell, int x, int y, float cellNearZ, float cellDepth)
     {
         float depth = cell.BlockadeLength * cellDepth;
-        StretchToDepth(blockade, depth);
+
+        if (blockade.TryGetComponent(out BlockadeFitter fitter)) fitter.Fit(depth);
+        else StretchToDepth(blockade, depth);
 
         Vector3 position = blockade.transform.localPosition;
         blockade.transform.localPosition = new Vector3(position.x, position.y, cellNearZ + depth * 0.5f);
@@ -112,41 +138,89 @@ public class TrackInitiator : MonoBehaviour
 
     private void AlignRampToCellEnd(GameObject ramp, float cellFarZ)
     {
-        if (!RendererBoundsUtility.TryGetVisibleBounds(ramp, out Bounds bounds)) return;
+        if (!ObstacleBoundsUtility.TryGetGameplayBounds(ramp, out Bounds bounds)) return;
 
         float rampFarZ = ToLocalZ(bounds.max.z);
         ramp.transform.localPosition += new Vector3(0f, 0f, cellFarZ + RAMP_OVERLAP - rampFarZ);
     }
 
-    private void RegisterCoinPath(CoinPath[,] coinPaths, ObstacleCell cell, int x, int y, GameObject obstacle, float laneY, float cellNearZ, float cellDepth)
+    private void RegisterCoinPath(CoinPath[,] coinPaths, bool[,] claimed, ObstacleCell cell, int x, int y, GameObject obstacle,
+        float laneY, float cellNearZ, float cellDepth, float zNearLocal)
     {
         float groundY = laneY + COIN_BASE_Y_OFFSET;
-        float topY = GetTopLocalY(obstacle) + COIN_SURFACE_Y_OFFSET;
 
         switch (cell.Type)
         {
             case ObsticleType.Blockade:
-                for (int l = 0; l < cell.BlockadeLength && y + l < ObsticleSetSO.ROWS; l++)
-                {
-                    coinPaths[x, y + l] = CoinPath.Flat(topY);
-                }
+                RegisterBlockadeTop(coinPaths, claimed, cell, x, y, obstacle);
                 break;
 
             case ObsticleType.Jump:
-                coinPaths[x, y] = CoinPath.Arc(groundY, topY);
+                RegisterJumpArc(coinPaths, claimed, x, y, obstacle, groundY, cellDepth, zNearLocal);
+                break;
+
+            case ObsticleType.Slide:
+                coinPaths[x, y] = CoinPath.Flat(GetBottomLocalY(obstacle) - COIN_UNDER_Y_OFFSET);
+                claimed[x, y] = true;
                 break;
 
             case ObsticleType.Ramp:
-                coinPaths[x, y] = CoinPath.Slope(groundY, topY, GetRampStartT(obstacle, cellNearZ, cellDepth), 1f);
+                RegisterRampSlope(coinPaths, claimed, x, y, obstacle, groundY, cellNearZ, cellDepth);
                 break;
         }
     }
 
-    private float GetRampStartT(GameObject ramp, float cellNearZ, float cellDepth)
+    private void RegisterBlockadeTop(CoinPath[,] coinPaths, bool[,] claimed, ObstacleCell cell, int x, int y, GameObject obstacle)
     {
-        if (!RendererBoundsUtility.TryGetVisibleBounds(ramp, out Bounds bounds)) return 0f;
+        CoinPath path = CoinPath.Flat(GetTopLocalY(obstacle) + COIN_SURFACE_Y_OFFSET);
 
-        return Mathf.Clamp01((ToLocalZ(bounds.min.z) - cellNearZ) / cellDepth);
+        for (int length = 0; length < cell.BlockadeLength && y + length < ObsticleSetSO.ROWS; length++)
+        {
+            coinPaths[x, y + length] = path;
+            claimed[x, y + length] = true;
+        }
+    }
+
+    private void RegisterRampSlope(CoinPath[,] coinPaths, bool[,] claimed, int x, int y, GameObject obstacle, float groundY,
+        float cellNearZ, float cellDepth)
+    {
+        claimed[x, y] = true;
+        if (!ObstacleBoundsUtility.TryGetGameplayBounds(obstacle, out Bounds bounds)) return;
+
+        float startZ = ToLocalZ(bounds.min.z);
+        float startT = Mathf.Clamp01((startZ - cellNearZ) / cellDepth);
+        coinPaths[x, y] = CoinPath.Slope(startZ, groundY, ToLocalZ(bounds.max.z), GetTopLocalY(obstacle) + COIN_SURFACE_Y_OFFSET, startT);
+    }
+
+    private void RegisterJumpArc(CoinPath[,] coinPaths, bool[,] claimed, int x, int y, GameObject obstacle, float groundY,
+        float cellDepth, float zNearLocal)
+    {
+        claimed[x, y] = true;
+        if (!ObstacleBoundsUtility.TryGetGameplayBounds(obstacle, out Bounds bounds)) return;
+
+        JumpArc arc = MovmentController.Arc;
+        float speed = TrackSpeed();
+        float peakZ = ToLocalZ(bounds.min.z);
+        float startZ = peakZ - arc.RiseDistance(speed);
+        float endZ = peakZ + arc.FallDistance(speed);
+
+        CoinPath path = CoinPath.Jump(startZ, groundY, peakZ, groundY + arc.Height, endZ);
+        int firstRow = Mathf.Max(0, Mathf.FloorToInt((startZ - zNearLocal) / cellDepth));
+        int lastRow = Mathf.Min(ObsticleSetSO.ROWS - 1, Mathf.FloorToInt((endZ - zNearLocal) / cellDepth));
+
+        for (int row = firstRow; row <= lastRow; row++)
+        {
+            if (row != y && claimed[x, row]) continue;
+
+            coinPaths[x, row] = path;
+        }
+    }
+
+    private static float TrackSpeed()
+    {
+        if (SegmentMover.MoveSpeed > 0.01f) return SegmentMover.MoveSpeed;
+
+        return GameManager.instance != null ? GameManager.instance.StartGameSpeed : DEFAULT_TRACK_SPEED;
     }
 
     private void PlaceCoins(ObsticleSetSO set, TrackApperenceSO look, int cols, float cellDepth, float zNearLocal, CoinPath[,] coinPaths)
@@ -176,11 +250,10 @@ public class TrackInitiator : MonoBehaviour
                     bool isPowerUp = powerUpPrefab != null && coinIndex == powerUpIndex;
                     coinIndex++;
 
+                    float coinZ = zNearLocal + (y + path.EvaluateT(t)) * cellDepth;
+
                     GameObject coin = Instantiate(isPowerUp ? powerUpPrefab : look.CoinPrefab, transform);
-                    coin.transform.localPosition = new Vector3(
-                        laneLocal.x,
-                        path.EvaluateY(t),
-                        zNearLocal + (y + path.EvaluateT(t)) * cellDepth);
+                    coin.transform.localPosition = new Vector3(laneLocal.x, path.EvaluateY(coinZ), coinZ);
                 }
             }
     }
@@ -210,14 +283,21 @@ public class TrackInitiator : MonoBehaviour
 
     private float GetTopLocalY(GameObject obstacle)
     {
-        if (!RendererBoundsUtility.TryGetVisibleBounds(obstacle, out Bounds bounds)) return obstacle.transform.localPosition.y;
+        if (!ObstacleBoundsUtility.TryGetGameplayBounds(obstacle, out Bounds bounds)) return obstacle.transform.localPosition.y;
 
         return transform.InverseTransformPoint(new Vector3(bounds.center.x, bounds.max.y, bounds.center.z)).y;
     }
 
+    private float GetBottomLocalY(GameObject obstacle)
+    {
+        if (!ObstacleBoundsUtility.TryGetGameplayBounds(obstacle, out Bounds bounds)) return obstacle.transform.localPosition.y;
+
+        return transform.InverseTransformPoint(new Vector3(bounds.center.x, bounds.min.y, bounds.center.z)).y;
+    }
+
     private static void StretchToDepth(GameObject obstacle, float targetDepth)
     {
-        if (targetDepth <= 0f || !RendererBoundsUtility.TryGetVisibleBounds(obstacle, out Bounds bounds)) return;
+        if (targetDepth <= 0f || !ObstacleBoundsUtility.TryGetGameplayBounds(obstacle, out Bounds bounds)) return;
 
         float current = bounds.size.z;
         if (current <= 0.0001f) return;

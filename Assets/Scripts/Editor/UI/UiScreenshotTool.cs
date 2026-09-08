@@ -17,7 +17,8 @@ public static class UiScreenshotTool
     private const int CAPTURE_LAYER = 31;
     private const string GAME_SCENE_PATH = "Assets/Scenes/GameScene.unity";
     private const float SAMPLE_SCORE = 12480f;
-    private const float SAMPLE_BEST_SCORE = 9870f;
+    private const float SAMPLE_BEST_SCORE = 18420f;
+    private const string SAMPLE_RECORD_HOLDER = "Bosman";
 
     private static readonly Vector2Int Landscape = new Vector2Int(1920, 1080);
     private static readonly Vector2Int Portrait = new Vector2Int(1080, 1920);
@@ -110,9 +111,14 @@ public static class UiScreenshotTool
         gameplay.SetActive(false);
         endScreen.SetActive(true);
         DeathUIManager death = endScreen.GetComponent<DeathUIManager>();
-        death.PresentScore(SAMPLE_SCORE, SAMPLE_BEST_SCORE);
+        var record = new HighScoreEntry { Name = SAMPLE_RECORD_HOLDER, Score = SAMPLE_BEST_SCORE };
+        death.PresentScore(SAMPLE_SCORE, record, true);
         Capture(camera, canvas, Landscape, Path.Combine(outputDirectory, "death.png"));
         Capture(camera, canvas, Portrait, Path.Combine(outputDirectory, "death_portrait.png"));
+
+        death.PresentScore(SAMPLE_BEST_SCORE + 2560f, record, true);
+        Capture(camera, canvas, Landscape, Path.Combine(outputDirectory, "death_new_record.png"));
+        death.PresentScore(SAMPLE_SCORE, record, true);
 
         try
         {

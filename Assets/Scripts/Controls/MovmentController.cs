@@ -55,6 +55,8 @@ public class MovmentController : MonoBehaviour
     private const float DEFAULT_LANE_WIDTH = 3f;
     private const float LANE_INPUT_THRESHOLD = 0.5f;
 
+    public static JumpArc Arc { get; private set; } = JumpArc.Default;
+
     public float JumpHeightMultiplier { get; set; } = 1f;
     public float LaneWidth { get; private set; } = DEFAULT_LANE_WIDTH;
 
@@ -86,6 +88,7 @@ public class MovmentController : MonoBehaviour
     private void Awake()
     {
         _rigidbody = GetComponent<Rigidbody>();
+        Arc = new JumpArc(_jumpDuration, _jumpHeight, _fallSpeed);
 
         CapsuleCollider capsule = GetComponent<CapsuleCollider>();
         float standingOffset = capsule.height * 0.5f - capsule.center.y;

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -17,8 +16,15 @@ public class DeathUIManager : MonoBehaviour
     [SerializeField]
     private string MenuSceneName;
 
+    private const string RECORD_CAPTION = "Rekord";
+    private const string BEATEN_RECORD_CAPTION = "Poprzedni rekord";
+    private const string UNKNOWN_HOLDER = "Anonim";
+
     [Header("Score")]
     [SerializeField] private TMP_Text _scoreText;
+    [SerializeField] private GameObject _bestRow;
+    [SerializeField] private TMP_Text _bestCaptionText;
+    [SerializeField] private TMP_Text _bestNameText;
     [SerializeField] private TMP_Text _bestScoreText;
     [SerializeField] private GameObject _newRecordBadge;
 
@@ -43,7 +49,8 @@ public class DeathUIManager : MonoBehaviour
     private void OnEnable()
     {
         _score = GameManager.instance != null ? GameManager.instance.Score.Value : 0f;
-        PresentScore(_score, BestScore());
+        bool hasRecord = TryGetRecord(out HighScoreEntry record);
+        PresentScore(_score, record, hasRecord);
         ShowActions();
 
         if (_scoreSaveInput != null) _scoreSaveInput.onValueChanged.AddListener(OnNameChanged);
@@ -54,11 +61,18 @@ public class DeathUIManager : MonoBehaviour
         if (_scoreSaveInput != null) _scoreSaveInput.onValueChanged.RemoveListener(OnNameChanged);
     }
 
-    public void PresentScore(float score, float bestScore)
+    public void PresentScore(float score, HighScoreEntry record, bool hasRecord)
     {
         if (_scoreText != null) _scoreText.text = ScoreFormatter.Format(score);
-        if (_bestScoreText != null) _bestScoreText.text = ScoreFormatter.Format(Mathf.Max(bestScore, score));
-        if (_newRecordBadge != null) _newRecordBadge.SetActive(score > bestScore && score > 0f);
+
+        bool beatenRecord = hasRecord && score > record.Score;
+        if (_newRecordBadge != null) _newRecordBadge.SetActive(score > 0f && (!hasRecord || beatenRecord));
+        if (_bestRow != null) _bestRow.SetActive(hasRecord);
+        if (!hasRecord) return;
+
+        if (_bestCaptionText != null) _bestCaptionText.text = beatenRecord ? BEATEN_RECORD_CAPTION : RECORD_CAPTION;
+        if (_bestNameText != null) _bestNameText.text = string.IsNullOrWhiteSpace(record.Name) ? UNKNOWN_HOLDER : record.Name;
+        if (_bestScoreText != null) _bestScoreText.text = ScoreFormatter.Format(record.Score);
     }
 
     public void MainMenu()
@@ -121,15 +135,19 @@ public class DeathUIManager : MonoBehaviour
         if (_saveConfirmButton != null) _saveConfirmButton.interactable = !string.IsNullOrWhiteSpace(value);
     }
 
-    private static float BestScore()
+    private static bool TryGetRecord(out HighScoreEntry record)
     {
-        List<HighScoreEntry> scores = HighScoreManager.GetHighScores();
-        float best = 0f;
-        foreach (HighScoreEntry entry in scores)
+        record = default;
+        bool found = false;
+
+        foreach (HighScoreEntry entry in HighScoreManager.GetHighScores())
         {
-            if (entry.Score > best) best = entry.Score;
+            if (found && entry.Score <= record.Score) continue;
+
+            record = entry;
+            found = true;
         }
 
-        return best;
+        return found;
     }
 }

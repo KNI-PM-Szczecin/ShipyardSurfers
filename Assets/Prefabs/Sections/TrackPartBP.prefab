@@ -143,6 +143,9 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   TrackRenderer: {fileID: 6562177111245551807}
+  _defaultWallRenderers:
+  - {fileID: 8106220324229675957}
+  - {fileID: 7438028097217837987}
 --- !u!1 &1697210067403278686
 GameObject:
   m_ObjectHideFlags: 0

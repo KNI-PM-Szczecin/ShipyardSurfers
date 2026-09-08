@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class SegmentMover : MonoBehaviour
 {
-    public static float MoveSpeed = 2;
+    public static float MoveSpeed = 0f;
 
     private void FixedUpdate()
     {
