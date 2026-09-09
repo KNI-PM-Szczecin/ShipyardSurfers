@@ -32,7 +32,7 @@ MonoBehaviour:
     BlockadeLength: 1
     HasCoin: 0
   - Type: 3
-    BlockadeLength: 1
+    BlockadeLength: 2
     HasCoin: 0
   - Type: 0
     BlockadeLength: 1
@@ -43,15 +43,6 @@ MonoBehaviour:
   - Type: 0
     BlockadeLength: 1
     HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 0
-  - Type: 0
-    BlockadeLength: 1
-    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
     HasCoin: 1
@@ -63,14 +54,23 @@ MonoBehaviour:
     HasCoin: 0
   - Type: 0
     BlockadeLength: 1
-    HasCoin: 0
+    HasCoin: 1
   - Type: 0
     BlockadeLength: 1
     HasCoin: 0
   - Type: 3
-    BlockadeLength: 1
+    BlockadeLength: 2
     HasCoin: 0
   - Type: 3
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 0
+    BlockadeLength: 1
+    HasCoin: 0
+  - Type: 0
     BlockadeLength: 1
     HasCoin: 0
   - Type: 0

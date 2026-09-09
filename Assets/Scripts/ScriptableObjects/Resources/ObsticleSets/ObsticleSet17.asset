@@ -80,7 +80,7 @@ MonoBehaviour:
     BlockadeLength: 1
     HasCoin: 1
   - Type: 3
-    BlockadeLength: 3
+    BlockadeLength: 2
     HasCoin: 0
   - Type: 3
     BlockadeLength: 3
