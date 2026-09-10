@@ -13,6 +13,13 @@ public static class ObsticleSetAnalyzer
         return false;
     }
 
+    public static bool ContinuesLeftObstacle(ObsticleSetSO set, int x, int y)
+    {
+        if (set.GetCell(x, y).Type != ObsticleType.Ramp) return false;
+
+        return set.GetCell(x - 1, y).Type == ObsticleType.Ramp;
+    }
+
     public static bool IsCoveredByBlockade(ObsticleSetSO set, int x, int y)
     {
         for (int back = 1; back < ObsticleSetSO.MAX_BLOCKADE_LENGTH; back++)

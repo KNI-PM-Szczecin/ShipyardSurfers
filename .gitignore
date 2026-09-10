@@ -85,3 +85,8 @@ Assets/Settings/Mobile_RPAsset.asset
 /Tools/**/__pycache__/
 /Tools/**/*.pt
 /Tools/**/*.onnx
+
+# Claude Code local files
+/CLAUDE.md
+/CLAUDE.local.md
+/.claude/

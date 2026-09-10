@@ -1,8 +1,10 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class TrackInitiator : MonoBehaviour
 {
+    private const int PIECES_PER_STEP = 16;
     private const int COINS_PER_CELL = 3;
     private const float COIN_BASE_Y_OFFSET = 1f;
     private const float COIN_SURFACE_Y_OFFSET = 0.5f;
@@ -19,9 +21,15 @@ public class TrackInitiator : MonoBehaviour
 
     private readonly TrackDresser _dresser = new TrackDresser();
 
-    private void Start() => BuildTrack();
+    private void Start() => StartCoroutine(BuildTrackRoutine());
 
     public void BuildTrack()
+    {
+        IEnumerator steps = BuildTrackRoutine();
+        while (steps.MoveNext()) { }
+    }
+
+    private IEnumerator BuildTrackRoutine()
     {
         var set = GenerationManager.Instance.GetRandomObsticles();
         var look = GenerationManager.Instance.GetRandomApperence();
@@ -29,12 +37,12 @@ public class TrackInitiator : MonoBehaviour
         if (set == null || look == null)
         {
             Debug.LogError("WARNING: Null obsticle set or track apperence", this);
-            return;
+            yield break;
         }
         if (LaneCenters == null || LaneCenters.Count == 0)
         {
             Debug.LogError("WARNING: track indicators not defined", this);
-            return;
+            yield break;
         }
 
         if (TrackRenderer == null) TrackRenderer = GetComponentInChildren<Renderer>();
@@ -44,16 +52,24 @@ public class TrackInitiator : MonoBehaviour
         float cellDepth = (zFarLocal - zNearLocal) / ObsticleSetSO.ROWS;
         int cols = Mathf.Min(ObsticleSetSO.COLUMNS, LaneCenters.Count);
 
-        CoinPath[,] coinPaths = PlaceObstacles(set, look, cols, cellDepth, zNearLocal);
-        PlaceCoins(set, look, cols, cellDepth, zNearLocal, coinPaths);
-        DressTrack(look, zNearLocal, zFarLocal);
+        CoinPath[,] coinPaths = CreateGroundCoinPaths(cols);
+
+        foreach (object step in PlaceObstacles(set, look, cols, cellDepth, zNearLocal, coinPaths)) yield return step;
+        foreach (object step in PlaceCoins(set, look, cols, cellDepth, zNearLocal, coinPaths)) yield return step;
+        foreach (object step in DressTrack(look, zNearLocal, zFarLocal)) yield return step;
     }
 
-    private void DressTrack(TrackApperenceSO look, float zNearLocal, float zFarLocal)
+    private IEnumerable DressTrack(TrackApperenceSO look, float zNearLocal, float zFarLocal)
     {
-        float floorLocalY = transform.InverseTransformPoint(new Vector3(0f, TrackRenderer.bounds.max.y, 0f)).y;
-        _dresser.Dress(transform, look, floorLocalY, zNearLocal, zFarLocal);
+        HideDefaultWalls(look);
 
+        float floorLocalY = transform.InverseTransformPoint(new Vector3(0f, TrackRenderer.bounds.max.y, 0f)).y;
+
+        foreach (object step in _dresser.DressSteps(transform, look, floorLocalY, zNearLocal, zFarLocal)) yield return step;
+    }
+
+    private void HideDefaultWalls(TrackApperenceSO look)
+    {
         if (!look.HasWallSegments || _defaultWallRenderers == null) return;
 
         foreach (Renderer wall in _defaultWallRenderers)
@@ -62,10 +78,12 @@ public class TrackInitiator : MonoBehaviour
         }
     }
 
-    private CoinPath[,] PlaceObstacles(ObsticleSetSO set, TrackApperenceSO look, int cols, float cellDepth, float zNearLocal)
+    private IEnumerable PlaceObstacles(ObsticleSetSO set, TrackApperenceSO look, int cols, float cellDepth, float zNearLocal,
+        CoinPath[,] coinPaths)
     {
-        CoinPath[,] coinPaths = CreateGroundCoinPaths(cols);
         var claimed = new bool[cols, ObsticleSetSO.ROWS];
+        var obstacles = new GameObject[cols, ObsticleSetSO.ROWS];
+        int placed = 0;
 
         for (int y = 0; y < ObsticleSetSO.ROWS; y++)
             for (int x = 0; x < cols; x++)
@@ -82,6 +100,7 @@ public class TrackInitiator : MonoBehaviour
                 float cellNearZ = zNearLocal + y * cellDepth;
 
                 GameObject obstacle = Instantiate(prefab, transform);
+                obstacles[x, y] = obstacle;
                 obstacle.transform.localPosition = new Vector3(laneLocal.x, laneLocal.y + OBSTACLE_PIVOT_Y_OFFSET, cellNearZ + cellDepth * 0.5f);
 
                 switch (cell.Type)
@@ -96,9 +115,33 @@ public class TrackInitiator : MonoBehaviour
                 }
 
                 RegisterCoinPath(coinPaths, claimed, cell, x, y, obstacle, laneLocal.y, cellNearZ, cellDepth, zNearLocal);
+
+                placed++;
+                if (placed % PIECES_PER_STEP == 0) yield return null;
             }
 
-        return coinPaths;
+        OpenJoinedSideWalls(set, obstacles, cols);
+    }
+
+    private static void OpenJoinedSideWalls(ObsticleSetSO set, GameObject[,] obstacles, int cols)
+    {
+        for (int y = 0; y < ObsticleSetSO.ROWS; y++)
+            for (int x = 1; x < cols; x++)
+            {
+                if (obstacles[x - 1, y] == null || obstacles[x, y] == null) continue;
+                if (!ObsticleSetAnalyzer.ContinuesLeftObstacle(set, x, y)) continue;
+
+                DisableSideWall(obstacles[x - 1, y], true);
+                DisableSideWall(obstacles[x, y], false);
+            }
+    }
+
+    private static void DisableSideWall(GameObject obstacle, bool onRight)
+    {
+        foreach (SideWallCollisionDetector wall in obstacle.GetComponentsInChildren<SideWallCollisionDetector>())
+        {
+            if (wall.IsOnRight == onRight) wall.gameObject.SetActive(false);
+        }
     }
 
     private CoinPath[,] CreateGroundCoinPaths(int cols)
@@ -223,9 +266,10 @@ public class TrackInitiator : MonoBehaviour
         return GameManager.instance != null ? GameManager.instance.StartGameSpeed : DEFAULT_TRACK_SPEED;
     }
 
-    private void PlaceCoins(ObsticleSetSO set, TrackApperenceSO look, int cols, float cellDepth, float zNearLocal, CoinPath[,] coinPaths)
+    private IEnumerable PlaceCoins(ObsticleSetSO set, TrackApperenceSO look, int cols, float cellDepth, float zNearLocal,
+        CoinPath[,] coinPaths)
     {
-        if (look.CoinPrefab == null) return;
+        if (look.CoinPrefab == null) yield break;
 
         GameObject powerUpPrefab = null;
         if (PowerUpSpawnRoller.TryRoll(CountCoins(set, cols), out int powerUpIndex, out PowerUpType type))
@@ -254,6 +298,8 @@ public class TrackInitiator : MonoBehaviour
 
                     GameObject coin = Instantiate(isPowerUp ? powerUpPrefab : look.CoinPrefab, transform);
                     coin.transform.localPosition = new Vector3(laneLocal.x, path.EvaluateY(coinZ), coinZ);
+
+                    if (coinIndex % PIECES_PER_STEP == 0) yield return null;
                 }
             }
     }

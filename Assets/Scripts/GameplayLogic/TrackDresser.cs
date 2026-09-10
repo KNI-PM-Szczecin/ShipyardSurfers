@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public sealed class TrackDresser
@@ -7,27 +8,34 @@ public sealed class TrackDresser
     private const float WALL_GAP = 0.05f;
     private const float MIN_SPACING = 0.4f;
     private const int MAX_PIECES_PER_PASS = 400;
+    private const int PIECES_PER_STEP = 16;
 
     public void Dress(Transform segment, TrackApperenceSO look, float floorLocalY, float zNearLocal, float zFarLocal)
     {
-        if (look == null || segment == null) return;
+        IEnumerator steps = DressSteps(segment, look, floorLocalY, zNearLocal, zFarLocal).GetEnumerator();
+        while (steps.MoveNext()) { }
+    }
+
+    public IEnumerable DressSteps(Transform segment, TrackApperenceSO look, float floorLocalY, float zNearLocal, float zFarLocal)
+    {
+        if (look == null || segment == null) yield break;
 
         if (look.HasWallSegments)
         {
             Transform walls = CreateGroup(segment, WALLS_NAME);
-            PlaceWalls(walls, look, floorLocalY, zNearLocal, zFarLocal, -1f);
-            PlaceWalls(walls, look, floorLocalY, zNearLocal, zFarLocal, 1f);
+            foreach (object step in PlaceWalls(walls, look, floorLocalY, zNearLocal, zFarLocal, -1f)) yield return step;
+            foreach (object step in PlaceWalls(walls, look, floorLocalY, zNearLocal, zFarLocal, 1f)) yield return step;
         }
 
-        if (look.BackdropProps == null || look.BackdropProps.Length == 0) return;
+        if (look.BackdropProps == null || look.BackdropProps.Length == 0) yield break;
 
         Transform backdrop = CreateGroup(segment, BACKDROP_NAME);
         int passes = Mathf.Max(1, look.BackdropPasses);
 
         for (int pass = 0; pass < passes; pass++)
         {
-            PlaceBackdrop(backdrop, look, floorLocalY, zNearLocal, zFarLocal, -1f);
-            PlaceBackdrop(backdrop, look, floorLocalY, zNearLocal, zFarLocal, 1f);
+            foreach (object step in PlaceBackdrop(backdrop, look, floorLocalY, zNearLocal, zFarLocal, -1f)) yield return step;
+            foreach (object step in PlaceBackdrop(backdrop, look, floorLocalY, zNearLocal, zFarLocal, 1f)) yield return step;
         }
     }
 
@@ -41,7 +49,7 @@ public sealed class TrackDresser
         return group;
     }
 
-    private static void PlaceWalls(Transform parent, TrackApperenceSO look, float floorLocalY, float zNearLocal, float zFarLocal, float side)
+    private static IEnumerable PlaceWalls(Transform parent, TrackApperenceSO look, float floorLocalY, float zNearLocal, float zFarLocal, float side)
     {
         float z = zNearLocal;
         int guard = 0;
@@ -49,13 +57,13 @@ public sealed class TrackDresser
         while (z < zFarLocal && guard++ < MAX_PIECES_PER_PASS)
         {
             GameObject prefab = look.WallSegmentPrefabs[Random.Range(0, look.WallSegmentPrefabs.Length)];
-            if (prefab == null) return;
+            if (prefab == null) yield break;
 
             GameObject piece = Object.Instantiate(prefab, parent);
             if (!RendererBoundsUtility.TryGetVisibleBounds(piece, out Bounds bounds) || bounds.size.z <= 0.01f)
             {
                 Object.Destroy(piece);
-                return;
+                yield break;
             }
 
             Vector3 localCenter = parent.InverseTransformPoint(bounds.center);
@@ -68,14 +76,16 @@ public sealed class TrackDresser
             piece.transform.localPosition += target - localCenter;
 
             z += depth + WALL_GAP;
+
+            if (guard % PIECES_PER_STEP == 0) yield return null;
         }
     }
 
-    private static void PlaceBackdrop(Transform parent, TrackApperenceSO look, float floorLocalY, float zNearLocal, float zFarLocal, float side)
+    private static IEnumerable PlaceBackdrop(Transform parent, TrackApperenceSO look, float floorLocalY, float zNearLocal, float zFarLocal, float side)
     {
         float totalWeight = 0f;
         foreach (BackdropProp prop in look.BackdropProps) totalWeight += Mathf.Max(0f, prop.Weight);
-        if (totalWeight <= 0f) return;
+        if (totalWeight <= 0f) yield break;
 
         float spacingMin = Mathf.Max(MIN_SPACING, look.BackdropSpacingMin);
         float spacingMax = Mathf.Max(spacingMin, look.BackdropSpacingMax);
@@ -88,6 +98,8 @@ public sealed class TrackDresser
         {
             Place(parent, Pick(look.BackdropProps, totalWeight), floorLocalY, wallOuterX, side, z);
             z += Random.Range(spacingMin, spacingMax);
+
+            if (guard % PIECES_PER_STEP == 0) yield return null;
         }
     }
 

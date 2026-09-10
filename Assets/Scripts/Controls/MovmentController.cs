@@ -48,12 +48,11 @@ public class MovmentController : MonoBehaviour
     private LayerMask _groundIgnoredLayers;
     [SerializeField] private float _rayStartHeight = 1f;
     [SerializeField] private float _rayLength = 1f;
-    [SerializeField] private float _groundProbeForwardOffset = 1f;
     [SerializeField] private float _stepTolerance = 0.05f;
 
     private const float TRACK_SNAP_EPSILON = 0.1f;
     private const float DEFAULT_LANE_WIDTH = 3f;
-    private const float LANE_INPUT_THRESHOLD = 0.5f;
+    private const float INPUT_THRESHOLD = 0.5f;
 
     public static JumpArc Arc { get; private set; } = JumpArc.Default;
 
@@ -68,6 +67,7 @@ public class MovmentController : MonoBehaviour
 
     private int _activeTrack;
     private int _lastLaneInputDirection;
+    private int _lastVerticalInputDirection;
     private bool _trackChangeLock;
     private bool _lastChangeIncrement;
     private float _stumbleEndTime;
@@ -75,6 +75,8 @@ public class MovmentController : MonoBehaviour
 
     private VerticalState _verticalState = VerticalState.Grounded;
     private float _jumpStartY;
+    private float _jumpTargetHeight;
+    private float _jumpRiseDuration;
     private float _jumpElapsed;
     private float _fallSpeedMultiplier = 1f;
     private bool _rollQueued;
@@ -85,6 +87,8 @@ public class MovmentController : MonoBehaviour
 
     private bool IsStumbling => Time.time < _stumbleEndTime;
 
+    private static float GroundLookAhead => SegmentMover.MoveSpeed * Time.fixedDeltaTime;
+
     private void Awake()
     {
         _rigidbody = GetComponent<Rigidbody>();
@@ -93,7 +97,7 @@ public class MovmentController : MonoBehaviour
         CapsuleCollider capsule = GetComponent<CapsuleCollider>();
         float standingOffset = capsule.height * 0.5f - capsule.center.y;
         _groundProbe = new GroundProbe(~_groundIgnoredLayers.value, capsule.radius, standingOffset,
-            _rayStartHeight, _rayLength, _groundProbeForwardOffset);
+            _rayStartHeight, _rayLength);
     }
 
     private void Start()
@@ -144,7 +148,7 @@ public class MovmentController : MonoBehaviour
 
     private void HandleLaneInput(float horizontal)
     {
-        int direction = ReadLaneDirection(horizontal);
+        int direction = ReadDirection(horizontal);
         bool pressed = direction != 0 && direction != _lastLaneInputDirection;
         _lastLaneInputDirection = direction;
 
@@ -153,10 +157,10 @@ public class MovmentController : MonoBehaviour
         ChangeTrack(direction > 0, _trackChangeDuration);
     }
 
-    private static int ReadLaneDirection(float horizontal)
+    private static int ReadDirection(float axis)
     {
-        if (horizontal >= LANE_INPUT_THRESHOLD) return 1;
-        if (horizontal <= -LANE_INPUT_THRESHOLD) return -1;
+        if (axis >= INPUT_THRESHOLD) return 1;
+        if (axis <= -INPUT_THRESHOLD) return -1;
         return 0;
     }
 
@@ -211,7 +215,7 @@ public class MovmentController : MonoBehaviour
 
         while (elapsed < duration)
         {
-            elapsed += Time.deltaTime;
+            elapsed += Time.fixedDeltaTime;
 
             Vector3 origin = transform.position + Vector3.up * _rayStartHeight;
             if (Physics.Raycast(origin, sideDirection, _sideCollisionDistance, _obsticleMask, QueryTriggerInteraction.Ignore))
@@ -223,7 +227,7 @@ public class MovmentController : MonoBehaviour
             float newX = Mathf.Lerp(startX, targetX, elapsed / duration);
             transform.position = new Vector3(newX, transform.position.y, transform.position.z);
 
-            yield return null;
+            yield return new WaitForFixedUpdate();
         }
 
         _trackChangeLock = false;
@@ -259,11 +263,17 @@ public class MovmentController : MonoBehaviour
 
     private void HandleVerticalInput(float vertical)
     {
-        if (vertical > 0f)
+        int direction = ReadDirection(vertical);
+        bool pressed = direction != 0 && direction != _lastVerticalInputDirection;
+        _lastVerticalInputDirection = direction;
+
+        if (!pressed) return;
+
+        if (direction > 0)
         {
             TryStartJump();
         }
-        else if (vertical < 0f)
+        else
         {
             TryStartRoll();
         }
@@ -305,6 +315,8 @@ public class MovmentController : MonoBehaviour
     {
         _jumpBuffer.Clear();
         _jumpStartY = transform.position.y;
+        _jumpTargetHeight = _jumpHeight * JumpHeightMultiplier;
+        _jumpRiseDuration = _jumpDuration * JumpHeightMultiplier;
         _jumpElapsed = 0f;
         _verticalState = VerticalState.Jumping;
     }
@@ -317,7 +329,7 @@ public class MovmentController : MonoBehaviour
                 return;
 
             case VerticalState.Grounded:
-                if (_groundProbe.TryProbe(transform.position, out GroundHit hit) && hit.IsSlope) return;
+                if (_groundProbe.TryProbe(transform.position, GroundLookAhead, out GroundHit hit) && hit.IsSlope) return;
                 StartRoll();
                 return;
 
@@ -330,7 +342,7 @@ public class MovmentController : MonoBehaviour
 
     private void UpdateGrounded()
     {
-        if (_groundProbe.TryProbe(transform.position, out GroundHit hit) && hit.StandingY >= transform.position.y - _stepTolerance)
+        if (_groundProbe.TryProbe(transform.position, GroundLookAhead, out GroundHit hit) && hit.StandingY >= transform.position.y - _stepTolerance)
         {
             SetY(hit.StandingY);
             return;
@@ -341,13 +353,10 @@ public class MovmentController : MonoBehaviour
 
     private void UpdateJumping(float deltaTime)
     {
-        float duration = _jumpDuration * JumpHeightMultiplier;
-        float height = _jumpHeight * JumpHeightMultiplier;
-
         _jumpElapsed += deltaTime;
-        SetY(Mathf.Lerp(_jumpStartY, _jumpStartY + height, _jumpElapsed / duration));
+        SetY(Mathf.Lerp(_jumpStartY, _jumpStartY + _jumpTargetHeight, _jumpElapsed / _jumpRiseDuration));
 
-        if (_jumpElapsed >= duration) StartFall(1f);
+        if (_jumpElapsed >= _jumpRiseDuration) StartFall(1f);
     }
 
     private void StartFall(float speedMultiplier)
@@ -366,7 +375,7 @@ public class MovmentController : MonoBehaviour
         float currentY = transform.position.y;
         float nextY = currentY - _fallSpeed * _fallSpeedMultiplier * deltaTime;
 
-        if (_groundProbe.TryProbe(transform.position, out GroundHit hit) && hit.StandingY >= nextY && CanLandOn(hit, currentY))
+        if (_groundProbe.TryProbe(transform.position, GroundLookAhead, out GroundHit hit) && hit.StandingY >= nextY && CanLandOn(hit, currentY))
         {
             Land(hit);
             return;
@@ -406,7 +415,7 @@ public class MovmentController : MonoBehaviour
     private void UpdateRolling(float deltaTime)
     {
         Vector3 standingPosition = new Vector3(transform.position.x, _standingY, transform.position.z);
-        bool hasGround = _groundProbe.TryProbe(standingPosition, out GroundHit hit)
+        bool hasGround = _groundProbe.TryProbe(standingPosition, GroundLookAhead, out GroundHit hit)
                          && hit.StandingY >= _standingY - _stepTolerance;
 
         if (!hasGround)

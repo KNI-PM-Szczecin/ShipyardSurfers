@@ -22,21 +22,19 @@ public sealed class GroundProbe
     private readonly float _standingOffset;
     private readonly float _startHeight;
     private readonly float _castLength;
-    private readonly float _forwardOffset;
 
-    public GroundProbe(int layerMask, float radius, float standingOffset, float startHeight, float extraLength, float forwardOffset)
+    public GroundProbe(int layerMask, float radius, float standingOffset, float startHeight, float extraLength)
     {
         _layerMask = layerMask;
         _radius = radius;
         _standingOffset = standingOffset;
         _startHeight = startHeight;
         _castLength = startHeight + extraLength;
-        _forwardOffset = forwardOffset;
     }
 
-    public bool TryProbe(Vector3 pivotPosition, out GroundHit hit)
+    public bool TryProbe(Vector3 pivotPosition, float lookAhead, out GroundHit hit)
     {
-        Vector3 origin = pivotPosition + Vector3.up * _startHeight + Vector3.forward * _forwardOffset;
+        Vector3 origin = pivotPosition + Vector3.up * _startHeight + Vector3.forward * lookAhead;
 
         if (!Physics.SphereCast(origin, _radius, Vector3.down, out RaycastHit raycastHit,
                 _castLength, _layerMask, QueryTriggerInteraction.Ignore))

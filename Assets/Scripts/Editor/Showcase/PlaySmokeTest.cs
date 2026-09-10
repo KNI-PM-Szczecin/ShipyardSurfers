@@ -16,15 +16,21 @@ public static class PlaySmokeTest
     private const float COIN_INSIDE_MARGIN = 0.15f;
     private const float SLIDE_COIN_CLEARANCE = 0.6f;
     private const float CAPSULE_REACH = 0.9f;
+    private const float CAPSULE_WIDTH = 1f;
     private const float ROOF_GAP_TOLERANCE = 0.35f;
     private const float OTHER_OBSTACLE_MARGIN = 1f;
     private const float RAMP_LANE_TOLERANCE = 1.5f;
     private const float RAMP_SEARCH_DISTANCE = 12f;
+    private const float RECYCLE_AT_FRACTION = 0.5f;
+    private const float RECYCLE_MARGIN = 10f;
 
     private static readonly List<string> Problems = new List<string>();
     private static double _startedAt;
     private static float _runSeconds;
     private static bool _armed;
+    private static bool _recycleRequested;
+    private static TrackInitiator _recycledSegment;
+    private static int _recycledPieces;
 
     static PlaySmokeTest()
     {
@@ -92,7 +98,10 @@ public static class PlaySmokeTest
 
     private static void Tick()
     {
-        if (EditorApplication.timeSinceStartup - _startedAt < _runSeconds) return;
+        double elapsed = EditorApplication.timeSinceStartup - _startedAt;
+
+        if (!_recycleRequested && elapsed >= _runSeconds * RECYCLE_AT_FRACTION) RequestRecycle();
+        if (elapsed < _runSeconds) return;
 
         EditorApplication.update -= Tick;
         Application.logMessageReceived -= OnLog;
@@ -120,9 +129,97 @@ public static class PlaySmokeTest
         Debug.Log($"{nameof(PlaySmokeTest)}: segments={segments} solidObstacles={solids.Count} wallPieces={walls} backdropProps={backdrop} problems={Problems.Count}");
         ReportCoins(solids);
         ReportRamps(solids);
+        ReportRecycling();
+        ReportFacingBouncers();
 
         foreach (string problem in Problems) Debug.Log($"{nameof(PlaySmokeTest)}: {problem}");
         if (segments == 0 || solids.Count == 0 || walls == 0 || backdrop == 0) Problems.Add("world is missing pieces");
+    }
+
+    private static void ReportFacingBouncers()
+    {
+        var walls = new List<SideWallCollisionDetector>();
+
+        foreach (SideWallCollisionDetector wall in Object.FindObjectsByType<SideWallCollisionDetector>(FindObjectsSortMode.None))
+        {
+            Transform root = wall.transform.parent;
+            if (root != null && root.name.StartsWith("RampBlock", StringComparison.Ordinal)) walls.Add(wall);
+        }
+
+        int pairs = 0;
+        string worst = "none";
+
+        foreach (SideWallCollisionDetector wall in walls)
+        {
+            if (!wall.IsOnRight) continue;
+
+            foreach (SideWallCollisionDetector other in walls)
+            {
+                if (other.IsOnRight) continue;
+
+                Vector3 gap = other.transform.position - wall.transform.position;
+                if (gap.x <= 0f || gap.x >= CAPSULE_WIDTH || Mathf.Abs(gap.z) > 1f) continue;
+
+                pairs++;
+                worst = $"ramp bouncers {gap.x:0.00} apart at x={wall.transform.position.x:0.0} z={wall.transform.position.z:0.0}";
+            }
+        }
+
+        Debug.Log($"{nameof(PlaySmokeTest)}: rampBouncers={walls.Count} facingPairs={pairs} example={worst}");
+        if (pairs > 0) Problems.Add($"{pairs} pairs of ramp bouncers sit closer together than the player capsule");
+    }
+
+    private static void RequestRecycle()
+    {
+        _recycleRequested = true;
+
+        TrackDestroyer destroyer = Object.FindFirstObjectByType<TrackDestroyer>();
+        if (destroyer == null) return;
+
+        TrackInitiator oldest = OldestGeneratedSegment();
+        if (oldest == null) return;
+
+        _recycledSegment = oldest;
+        _recycledPieces = CountPieces(oldest.transform);
+
+        float behindZ = destroyer.transform.position.z - RECYCLE_MARGIN;
+        oldest.transform.position += Vector3.forward * (behindZ - oldest.TrackRenderer.bounds.max.z);
+    }
+
+    private static TrackInitiator OldestGeneratedSegment()
+    {
+        TrackInitiator oldest = null;
+
+        foreach (TrackInitiator segment in Object.FindObjectsByType<TrackInitiator>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (!segment.enabled || segment.TrackRenderer == null) continue;
+            if (oldest == null || segment.TrackRenderer.bounds.max.z < oldest.TrackRenderer.bounds.max.z) oldest = segment;
+        }
+
+        return oldest;
+    }
+
+    private static int CountPieces(Transform parent)
+    {
+        int count = parent.childCount;
+
+        for (int i = 0; i < parent.childCount; i++) count += CountPieces(parent.GetChild(i));
+
+        return count;
+    }
+
+    private static void ReportRecycling()
+    {
+        if (_recycledSegment == null && _recycledPieces == 0)
+        {
+            Problems.Add("recycling check could not place a segment behind the track destroyer");
+            return;
+        }
+
+        bool removed = _recycledSegment == null;
+
+        Debug.Log($"{nameof(PlaySmokeTest)}: recycledSegmentPieces={_recycledPieces} removed={removed}");
+        if (!removed) Problems.Add($"a segment behind the track destroyer still holds {CountPieces(_recycledSegment.transform)} pieces");
     }
 
     private static List<Collider> SolidObstacleColliders()
