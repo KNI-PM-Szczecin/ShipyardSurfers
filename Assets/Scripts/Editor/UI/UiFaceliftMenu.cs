@@ -34,9 +34,17 @@ public static class UiFaceliftMenu
     {
         UiAssetLibrary assets = UiAssetLibrary.Load();
         GameHudUiBuilder.BuildAll(assets);
+        CalibrationSceneBuilder.Build(assets);
         MainMenuUiBuilder.Build(assets);
         AssetDatabase.SaveAssets();
         Debug.Log($"{nameof(UiFaceliftMenu)}: UI rebuilt");
+    }
+
+    [MenuItem(MENU_ROOT + "Rebuild Calibration Scene")]
+    public static void RebuildCalibrationScene()
+    {
+        CalibrationSceneBuilder.Build(UiAssetLibrary.Load());
+        AssetDatabase.SaveAssets();
     }
 
     [MenuItem(MENU_ROOT + "Rebuild Main Menu")]

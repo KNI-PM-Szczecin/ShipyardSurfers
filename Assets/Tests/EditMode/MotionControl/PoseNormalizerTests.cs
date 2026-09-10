@@ -28,12 +28,12 @@ public class PoseNormalizerTests
     [Test]
     public void NormalizesRelativeToShouldersWithYUp()
     {
-        var normalizer = new PoseNormalizer(new PoseValidityThresholds()) { Mirror = false };
+        var normalizer = new PoseNormalizer(new PoseValidityThresholds());
         var pose = new NormalizedPose();
 
         Assert.That(normalizer.TryNormalize(BuildFrame(), pose), Is.True);
         Assert.That(pose.IsValid, Is.True);
-        Assert.That(pose.LeftWrist.x, Is.EqualTo(1f).Within(0.0001f));
+        Assert.That(pose.LeftWrist.x, Is.EqualTo(-1f).Within(0.0001f));
         Assert.That(pose.LeftWrist.y, Is.EqualTo(0.5f).Within(0.0001f));
         Assert.That(pose.HipLine, Is.EqualTo(-1.25f).Within(0.0001f));
         Assert.That(pose.ShoulderCenter, Is.EqualTo(new Vector2(0.5f, 100f / HEIGHT)));
@@ -43,7 +43,7 @@ public class PoseNormalizerTests
     [Test]
     public void HiddenHipsFallBackToDefaultHipLine()
     {
-        var normalizer = new PoseNormalizer(new PoseValidityThresholds()) { Mirror = false };
+        var normalizer = new PoseNormalizer(new PoseValidityThresholds());
         var pose = new NormalizedPose();
 
         Assert.That(normalizer.TryNormalize(BuildFrame(hipConfidence: 0.1f), pose), Is.True);
@@ -51,9 +51,9 @@ public class PoseNormalizerTests
     }
 
     [Test]
-    public void MirrorFlipsHorizontalAxis()
+    public void MapsCameraAxisIntoBodySpaceSoOutwardIsAlwaysPositive()
     {
-        var normalizer = new PoseNormalizer(new PoseValidityThresholds()) { Mirror = true };
+        var normalizer = new PoseNormalizer(new PoseValidityThresholds());
         var pose = new NormalizedPose();
 
         normalizer.TryNormalize(BuildFrame(), pose);

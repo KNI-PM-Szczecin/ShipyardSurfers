@@ -18,6 +18,10 @@ public class MotionControlService : MonoBehaviour
     public IMotionControlSettings Settings { get; private set; }
     public MotionControlConfig Config => _config;
     public bool IsApplyingSettings => _applyRoutine != null;
+    public Texture CameraTexture => _camera != null ? _camera.Texture : null;
+    public bool CameraVerticallyMirrored => _camera != null && _camera.VerticallyMirrored;
+    public NormalizedPose Pose => _pose;
+    public PoseDebugSnapshot Snapshot => _snapshot;
 
     [SerializeField] private MotionControlConfig _config;
 
@@ -46,6 +50,17 @@ public class MotionControlService : MonoBehaviour
     private int _inferenceTimeouts;
     private float _nextCameraRestart;
     private float _nextDebugHeartbeat;
+    private bool _externalDemand;
+
+    public bool IsPipelineWanted => (Settings != null && Settings.Enabled) || _externalDemand;
+
+    public void SetExternalDemand(bool demanded)
+    {
+        if (_externalDemand == demanded) return;
+
+        _externalDemand = demanded;
+        ScheduleApplySettings();
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void AutoStart()
@@ -99,7 +114,7 @@ public class MotionControlService : MonoBehaviour
         _camera = new WebcamSource(Config.CameraWidth, Config.CameraHeight, Config.CameraFps);
         _cropper = new SquareCropBlitter(Config.InputSize);
         _decoder = new YoloPoseDecoder(Config.MinPersonConfidence);
-        _normalizer = new PoseNormalizer(Config.Validity) { Mirror = Settings.MirrorHorizontal };
+        _normalizer = new PoseNormalizer(Config.Validity);
         _smoother = new PoseSmoother(Config.Smoothing, KeypointIndex.UpperBody);
         _history = new PoseHistory(HISTORY_CAPACITY);
         _recognizer = new GestureRecognizer(GestureRecognizer.DefaultRules(), Config.Gestures, _history);
@@ -116,9 +131,7 @@ public class MotionControlService : MonoBehaviour
 
     private IEnumerator ApplySettingsRoutine()
     {
-        _normalizer.Mirror = Settings.MirrorHorizontal;
-
-        if (!Settings.Enabled)
+        if (!IsPipelineWanted)
         {
             StopPipeline();
             _applyRoutine = null;
@@ -133,7 +146,7 @@ public class MotionControlService : MonoBehaviour
             if (_runner != null)
             {
                 yield return null;
-                if (!Settings.Enabled)
+                if (!IsPipelineWanted)
                 {
                     _applyRoutine = null;
                     yield break;
@@ -276,7 +289,8 @@ public class MotionControlService : MonoBehaviour
         }
 
         _emitter.Update(now);
-        PublishDebug(resultArrived, poseValid, now);
+        if (resultArrived) UpdateSnapshot(poseValid, now);
+        PublishDebug(resultArrived, now);
     }
 
     private void RecoverStalledInference(float now)
@@ -328,7 +342,7 @@ public class MotionControlService : MonoBehaviour
         _fpsWindowStart = now;
     }
 
-    private void PublishDebug(bool resultArrived, bool poseValid, float now)
+    private void PublishDebug(bool resultArrived, float now)
     {
         if (!PoseDebugFeed.HasViewers) return;
 
@@ -336,6 +350,11 @@ public class MotionControlService : MonoBehaviour
         if (!resultArrived && now < _nextDebugHeartbeat) return;
         _nextDebugHeartbeat = now + DEBUG_HEARTBEAT_INTERVAL;
 
+        _debugPublisher.PublishPose(_snapshot);
+    }
+
+    private void UpdateSnapshot(bool poseValid, float now)
+    {
         _snapshot.State = _tracking.State;
         _snapshot.HasPerson = _frame.HasPerson;
         _snapshot.PersonConfidence = _frame.Confidence;
@@ -354,8 +373,6 @@ public class MotionControlService : MonoBehaviour
             _snapshot.Keypoints[i] = _frame.HasPerson ? _cropper.ModelToCamera(keypoint.Position) : default;
             _snapshot.Confidences[i] = _frame.HasPerson ? keypoint.Confidence : 0f;
         }
-
-        _debugPublisher.PublishPose(_snapshot);
     }
 
     private void OnDestroy()

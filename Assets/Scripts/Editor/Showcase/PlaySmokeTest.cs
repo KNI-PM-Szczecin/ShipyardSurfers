@@ -11,6 +11,8 @@ public static class PlaySmokeTest
 {
     private const string PENDING_MARKER = "Library/PlaySmokeTestPending";
     private const string RUN_SECONDS_ARGUMENT = "-smokeSeconds";
+    private const string SHOT_ARGUMENT = "-smokeShot";
+    private static readonly Vector2Int ShotSize = new Vector2Int(960, 540);
     private const string ENTRY_METHOD = "PlaySmokeTest.RunBatch";
     private const float DEFAULT_RUN_SECONDS = 12f;
     private const float COIN_INSIDE_MARGIN = 0.15f;
@@ -100,7 +102,12 @@ public static class PlaySmokeTest
     {
         double elapsed = EditorApplication.timeSinceStartup - _startedAt;
 
-        if (!_recycleRequested && elapsed >= _runSeconds * RECYCLE_AT_FRACTION) RequestRecycle();
+        if (!_recycleRequested && elapsed >= _runSeconds * RECYCLE_AT_FRACTION)
+        {
+            CaptureShot();
+            RequestRecycle();
+        }
+
         if (elapsed < _runSeconds) return;
 
         EditorApplication.update -= Tick;
@@ -134,6 +141,24 @@ public static class PlaySmokeTest
 
         foreach (string problem in Problems) Debug.Log($"{nameof(PlaySmokeTest)}: {problem}");
         if (segments == 0 || solids.Count == 0 || walls == 0 || backdrop == 0) Problems.Add("world is missing pieces");
+    }
+
+    private static void CaptureShot()
+    {
+        string path = ArgumentValue(SHOT_ARGUMENT);
+        if (string.IsNullOrEmpty(path)) return;
+
+        Camera camera = Camera.main;
+        if (camera == null)
+        {
+            Debug.Log($"{nameof(PlaySmokeTest)}: no main camera to capture");
+            return;
+        }
+
+        string directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+
+        SceneCapture.RenderToPng(camera, ShotSize, path);
     }
 
     private static void ReportFacingBouncers()
@@ -474,12 +499,18 @@ public static class PlaySmokeTest
 
     private static float RunSecondsFromArguments()
     {
+        return float.TryParse(ArgumentValue(RUN_SECONDS_ARGUMENT), out float seconds) ? seconds : DEFAULT_RUN_SECONDS;
+    }
+
+    private static string ArgumentValue(string name)
+    {
         string[] arguments = Environment.GetCommandLineArgs();
+
         for (int i = 0; i < arguments.Length - 1; i++)
         {
-            if (arguments[i] == RUN_SECONDS_ARGUMENT && float.TryParse(arguments[i + 1], out float seconds)) return seconds;
+            if (arguments[i] == name) return arguments[i + 1];
         }
 
-        return DEFAULT_RUN_SECONDS;
+        return null;
     }
 }

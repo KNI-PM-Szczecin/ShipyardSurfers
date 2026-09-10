@@ -90,3 +90,6 @@ Assets/Settings/Mobile_RPAsset.asset
 /CLAUDE.md
 /CLAUDE.local.md
 /.claude/
+
+# Player builds
+/builds/

@@ -4,10 +4,10 @@ public class PoseNormalizer
 {
     public const float DEFAULT_HIP_LINE = -1.25f;
 
+    private const float CAMERA_TO_BODY_X_SIGN = -1f;
+
     private readonly PoseValidityThresholds _thresholds;
     private float _previousShoulderWidth = -1f;
-
-    public bool Mirror { get; set; } = true;
 
     public PoseNormalizer(PoseValidityThresholds thresholds)
     {
@@ -51,12 +51,11 @@ public class PoseNormalizer
         _previousShoulderWidth = shoulderWidth;
 
         Vector2 center = (leftShoulder.Position + rightShoulder.Position) * 0.5f;
-        float xSign = Mirror ? -1f : 1f;
 
         for (int i = 0; i < KeypointIndex.COUNT; i++)
         {
             Vector2 delta = frame.Keypoints[i].Position - center;
-            target.Points[i] = new Vector2(delta.x * xSign / shoulderWidth, -delta.y / shoulderWidth);
+            target.Points[i] = new Vector2(delta.x * CAMERA_TO_BODY_X_SIGN / shoulderWidth, -delta.y / shoulderWidth);
             target.Confidences[i] = frame.Keypoints[i].Confidence;
         }
 

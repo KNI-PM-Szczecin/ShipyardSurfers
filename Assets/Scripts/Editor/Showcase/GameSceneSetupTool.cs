@@ -9,12 +9,15 @@ public static class GameSceneSetupTool
     public const string GAME_SCENE_PATH = "Assets/Scenes/GameScene.unity";
     private const string MENU_PATH = "Shipyard Surfers/World/Setup Game Scene (sea + skybox)";
     private const string SEA_NAME = "Sea";
-    private const string SEA_MATERIAL_PATH = "Assets/DemoMaterials/Sea.mat";
+    private const string SEA_MATERIAL_PATH = "Assets/DemoMaterials/Water/Water.mat";
     private const int WATER_LAYER = 4;
-    private const float SEA_Y = -1.35f;
+    private const float SEA_Y = -0.8f;
     private const float SEA_SIZE = 600f;
     private const float SEA_CENTER_Z = 60f;
+    private const float FOG_START = 40f;
+    private const float FOG_END = 100f;
     private static readonly Color SeaColor = new Color(0.086f, 0.407f, 1f);
+    private static readonly Color FogColor = new Color(0.34f, 0.66f, 0.78f);
 
     [MenuItem(MENU_PATH)]
     public static void Apply()
@@ -28,11 +31,22 @@ public static class GameSceneSetupTool
             RenderSettings.ambientMode = AmbientMode.Skybox;
         }
 
+        ApplyDistanceFog();
         EnsureSea();
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
-        Debug.Log($"{nameof(GameSceneSetupTool)}: {GAME_SCENE_PATH} updated (skybox: {(skybox != null ? skybox.name : "unchanged")})");
+        Debug.Log($"{nameof(GameSceneSetupTool)}: {GAME_SCENE_PATH} updated (skybox: {(skybox != null ? skybox.name : "unchanged")}, " +
+                  $"fog: {FOG_START}-{FOG_END})");
+    }
+
+    private static void ApplyDistanceFog()
+    {
+        RenderSettings.fog = true;
+        RenderSettings.fogMode = FogMode.Linear;
+        RenderSettings.fogColor = FogColor;
+        RenderSettings.fogStartDistance = FOG_START;
+        RenderSettings.fogEndDistance = FOG_END;
     }
 
     private static void EnsureSea()

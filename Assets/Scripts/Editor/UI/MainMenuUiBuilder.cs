@@ -18,6 +18,24 @@ public static class MainMenuUiBuilder
     private const float LOGO_SIZE = 176f;
     private const float LOGO_GAP = 28f;
     private const float TITLE_SIZE = 76f;
+    private const float CLUB_LOGO_SIZE = 88f;
+    private const float HANDLE_WIDTH = 200f;
+    private const float LICENSE_WIDTH = 220f;
+    private const float HINT_MARGIN = 24f;
+    private const float HINT_WIDTH = 160f;
+    private const float HINT_HEIGHT = 36f;
+    private const float HINT_LABEL_SIZE = 18f;
+    private const float HINT_REST_ALPHA = 0.22f;
+    private const float HINT_HOVER_ALPHA = 0.9f;
+
+    private struct MenuButtons
+    {
+        public Button Start;
+        public Button Settings;
+        public Button Credits;
+        public Button Quit;
+        public Button Calibration;
+    }
 
     public static void Build(UiAssetLibrary assets)
     {
@@ -35,19 +53,26 @@ public static class MainMenuUiBuilder
         UiFactory.ClearChildren(canvasRect, menu.transform);
 
         BuildBackdrop(f, canvasRect);
-        RectTransform menuPanel = BuildMenuPanel(f, canvasRect, out Button start, out Button settings, out Button quit);
-        RectTransform settingsPanel = BuildSettingsPanel(f, canvasRect, out Button close);
+        RectTransform menuPanel = BuildMenuPanel(f, canvasRect, out MenuButtons buttons);
+        RectTransform settingsPanel = BuildSettingsPanel(f, canvasRect, out Button closeSettings);
+        RectTransform creditsPanel = BuildCreditsPanel(f, canvasRect, out Button closeCredits);
         settingsPanel.gameObject.SetActive(false);
+        creditsPanel.gameObject.SetActive(false);
         menu.transform.SetAsLastSibling();
 
         UiWiring.Set(menu,
-            ("_startGameButton", start),
-            ("_settingsButton", settings),
-            ("_quitButton", quit),
-            ("_closeSettingsButton", close),
+            ("_startGameButton", buttons.Start),
+            ("_settingsButton", buttons.Settings),
+            ("_creditsButton", buttons.Credits),
+            ("_calibrationButton", buttons.Calibration),
+            ("_quitButton", buttons.Quit),
+            ("_closeSettingsButton", closeSettings),
+            ("_closeCreditsButton", closeCredits),
             ("_settingsPanel", settingsPanel.gameObject),
+            ("_creditsPanel", creditsPanel.gameObject),
             ("_menuPanel", menuPanel.gameObject));
 
+        WireCalibrationScene(menu);
         BuildScoreboard(f);
 
         EditorSceneManager.MarkSceneDirty(scene);
@@ -74,23 +99,68 @@ public static class MainMenuUiBuilder
         wave.rectTransform.offsetMax = new Vector2(300f, 76f);
     }
 
-    private static RectTransform BuildMenuPanel(UiFactory f, RectTransform canvas, out Button start, out Button settings, out Button quit)
+    private static RectTransform BuildMenuPanel(UiFactory f, RectTransform canvas, out MenuButtons buttons)
     {
         RectTransform panel = f.Rect(canvas, "MainMenu");
         UiFactory.Stretch(panel);
 
         BuildLogo(f, panel);
 
-        RectTransform buttons = f.Rect(panel, "Buttons");
-        UiFactory.Place(buttons, new Vector2(0f, 1f), new Vector2(COLUMN_X, -440f), new Vector2(BUTTON_WIDTH, 300f));
-        f.VerticalLayout(buttons, new RectOffset(0, 0, 0, 0), 14f, TextAnchor.UpperLeft);
+        RectTransform column = f.Rect(panel, "Buttons");
+        UiFactory.Place(column, new Vector2(0f, 1f), new Vector2(COLUMN_X, -440f), new Vector2(BUTTON_WIDTH, 388f));
+        f.VerticalLayout(column, new RectOffset(0, 0, 0, 0), 14f, TextAnchor.UpperLeft);
 
-        start = f.Button(buttons, "Start", "Graj", null, UiButtonStyle.Primary, UiTheme.BUTTON_HEIGHT_LARGE, 28f);
-        settings = f.Button(buttons, "Settings", "Ustawienia", null, UiButtonStyle.Secondary);
-        quit = f.Button(buttons, "Quit", "Wyjdź", null, UiButtonStyle.Ghost);
+        buttons = new MenuButtons
+        {
+            Start = f.Button(column, "Start", "Graj", null, UiButtonStyle.Primary, UiTheme.BUTTON_HEIGHT_LARGE, 28f),
+            Settings = f.Button(column, "Settings", "Ustawienia", null, UiButtonStyle.Secondary),
+            Credits = f.Button(column, "Credits", "Autorzy", null, UiButtonStyle.Secondary),
+            Quit = f.Button(column, "Quit", "Wyjdź", null, UiButtonStyle.Ghost),
+            Calibration = BuildCalibrationHint(f, panel)
+        };
 
         BuildMotionControlHint(f, panel);
         return panel;
+    }
+
+    private static Button BuildCalibrationHint(UiFactory f, RectTransform panel)
+    {
+        RectTransform root = f.Rect(panel, "Calibration");
+        UiFactory.Place(root, new Vector2(1f, 0f), new Vector2(-HINT_MARGIN, HINT_MARGIN), new Vector2(HINT_WIDTH, HINT_HEIGHT));
+
+        TextMeshProUGUI label = f.Text(root, "Label", "Kalibracja", f.Assets.BodyMedium, HINT_LABEL_SIZE, UiTheme.White,
+            TextAlignmentOptions.MidlineRight);
+        UiFactory.Stretch(label.rectTransform);
+        label.raycastTarget = true;
+
+        var button = root.gameObject.AddComponent<Button>();
+        button.targetGraphic = label;
+        button.transition = Selectable.Transition.ColorTint;
+        button.colors = HintColors();
+        button.navigation = new Navigation { mode = Navigation.Mode.None };
+        return button;
+    }
+
+    private static ColorBlock HintColors()
+    {
+        return new ColorBlock
+        {
+            normalColor = UiTheme.Alpha(UiTheme.White, HINT_REST_ALPHA),
+            highlightedColor = UiTheme.Alpha(UiTheme.White, HINT_HOVER_ALPHA),
+            pressedColor = UiTheme.Alpha(UiTheme.Main2, HINT_HOVER_ALPHA),
+            selectedColor = UiTheme.Alpha(UiTheme.White, HINT_REST_ALPHA),
+            disabledColor = UiTheme.Alpha(UiTheme.White, HINT_REST_ALPHA * 0.5f),
+            colorMultiplier = 1f,
+            fadeDuration = 0.12f
+        };
+    }
+
+    private static void WireCalibrationScene(MenuController menu)
+    {
+        var scene = AssetDatabase.LoadAssetAtPath<SceneAsset>(CalibrationSceneBuilder.SCENE_PATH);
+        if (scene != null) UiWiring.Set(menu, ("CalibrationScene", scene));
+
+        UiWiring.SetString(menu, "CalibrationSceneName", CalibrationSceneBuilder.SCENE_NAME);
     }
 
     private static void BuildLogo(UiFactory f, RectTransform panel)
@@ -199,6 +269,107 @@ public static class MainMenuUiBuilder
             ("_statusIndicator", statusIndicator));
 
         return panel;
+    }
+
+    private static RectTransform BuildCreditsPanel(UiFactory f, RectTransform canvas, out Button close)
+    {
+        RectTransform panel = f.Rect(canvas, "CreditsPanel");
+        UiFactory.Stretch(panel);
+
+        RectTransform column = f.Rect(panel, "Column");
+        UiFactory.Place(column, new Vector2(0f, 1f), new Vector2(COLUMN_X, -80f), new Vector2(COLUMN_WIDTH, 900f));
+        f.VerticalLayout(column, new RectOffset(0, 0, 0, 0), 20f, TextAnchor.UpperLeft);
+
+        RectTransform header = f.Rect(column, "Header");
+        UiFactory.Layout(header, -1f, 64f);
+        f.HorizontalLayout(header, new RectOffset(0, 0, 0, 0), 18f, TextAnchor.MiddleLeft);
+        close = f.IconButton(header, "Back", f.Assets.Sprite("Icon_Back"), UiButtonStyle.Secondary, 56f);
+        TextMeshProUGUI title = f.Heading(header, "Title", "Autorzy", 44f, UiTheme.White, TextAlignmentOptions.MidlineLeft);
+        UiFactory.Layout(title, -1f, -1f, 1f);
+
+        BuildClubCard(f, column);
+        BuildTeamCard(f, column);
+        BuildAssetsCard(f, column);
+
+        return panel;
+    }
+
+    private static void BuildClubCard(UiFactory f, RectTransform column)
+    {
+        RectTransform card = f.Card(column, "ClubCard", UiTheme.Alpha(UiTheme.Main1, 0.92f), UiTheme.Line);
+        f.HorizontalLayout(card, new RectOffset(28, 28, 22, 22), 22f, TextAnchor.MiddleLeft);
+
+        Sprite logo = f.Assets.OptionalSprite(UiAssetLibrary.LOGO_SPRITE_NAME);
+        if (logo != null)
+        {
+            Image emblem = f.Icon(card, "Logo", logo, UiTheme.White, CLUB_LOGO_SIZE);
+            UiFactory.Layout(emblem, CLUB_LOGO_SIZE, CLUB_LOGO_SIZE);
+        }
+
+        RectTransform text = f.Rect(card, "Text");
+        UiFactory.Layout(text, -1f, CLUB_LOGO_SIZE, 1f);
+        f.VerticalLayout(text, new RectOffset(0, 0, 0, 0), 6f, TextAnchor.MiddleLeft);
+
+        TextMeshProUGUI name = f.Text(text, "Name", "KNI-PM-Szczecin", f.Assets.Body, 28f, UiTheme.White, TextAlignmentOptions.MidlineLeft);
+        UiFactory.Layout(name, -1f, 34f);
+
+        TextMeshProUGUI subtitle = f.Text(text, "Subtitle", "Koło Naukowe Informatyki · Politechnika Morska w Szczecinie",
+            f.Assets.BodyMedium, 20f, UiTheme.TextMuted, TextAlignmentOptions.MidlineLeft);
+        subtitle.textWrappingMode = TextWrappingModes.Normal;
+        UiFactory.Layout(subtitle, -1f, 30f);
+    }
+
+    private static void BuildTeamCard(UiFactory f, RectTransform column)
+    {
+        RectTransform card = f.Card(column, "TeamCard", UiTheme.Alpha(UiTheme.Main1, 0.92f), UiTheme.Line);
+        f.VerticalLayout(card, new RectOffset(28, 28, 22, 22), 10f, TextAnchor.UpperLeft);
+
+        TextMeshProUGUI caption = f.Caption(card, "Caption", "Programiści", UiTheme.Main2);
+        UiFactory.Layout(caption, -1f, 24f);
+
+        PersonRow(f, card, "Dominik", "Dominik Mech", "@invisibleF0x");
+        PersonRow(f, card, "Scarlet", "Scarlet Dorożalska", "@scarletsun");
+    }
+
+    private static void PersonRow(UiFactory f, RectTransform card, string name, string person, string handle)
+    {
+        RectTransform row = f.Rect(card, name);
+        UiFactory.Layout(row, -1f, 34f);
+        f.HorizontalLayout(row, new RectOffset(0, 0, 0, 0), 12f, TextAnchor.MiddleLeft);
+
+        TextMeshProUGUI label = f.Text(row, "Name", person, f.Assets.Body, 23f, UiTheme.White, TextAlignmentOptions.MidlineLeft);
+        UiFactory.Layout(label, -1f, -1f, 1f);
+
+        TextMeshProUGUI tag = f.Text(row, "Handle", handle, f.Assets.BodyMedium, 20f, UiTheme.TextMuted, TextAlignmentOptions.MidlineRight);
+        UiFactory.Layout(tag, HANDLE_WIDTH, 30f);
+    }
+
+    private static void BuildAssetsCard(UiFactory f, RectTransform column)
+    {
+        RectTransform card = f.Card(column, "AssetsCard", UiTheme.Alpha(UiTheme.Main1, 0.92f), UiTheme.Line);
+        f.VerticalLayout(card, new RectOffset(28, 28, 22, 22), 8f, TextAnchor.UpperLeft);
+
+        TextMeshProUGUI caption = f.Caption(card, "Caption", "Modele i zasoby", UiTheme.Main2);
+        UiFactory.Layout(caption, -1f, 24f);
+
+        AssetRow(f, card, "PirateKit", "Pirate Kit · Kenney", "CC0 1.0");
+        AssetRow(f, card, "WatercraftKit", "Watercraft Kit · Kenney", "CC0 1.0");
+        AssetRow(f, card, "FactoryKit", "Factory Kit · Kenney", "CC0 1.0");
+        AssetRow(f, card, "Crane", "Dźwig · J-Toastie", "CC BY 3.0");
+        AssetRow(f, card, "Skybox", "Fantasy Skybox FREE · Render Knight", "Asset Store EULA");
+    }
+
+    private static void AssetRow(UiFactory f, RectTransform card, string name, string asset, string license)
+    {
+        RectTransform row = f.Rect(card, name);
+        UiFactory.Layout(row, -1f, 30f);
+        f.HorizontalLayout(row, new RectOffset(0, 0, 0, 0), 12f, TextAnchor.MiddleLeft);
+
+        TextMeshProUGUI label = f.Text(row, "Asset", asset, f.Assets.BodyMedium, 20f, UiTheme.TextMuted, TextAlignmentOptions.MidlineLeft);
+        UiFactory.Layout(label, -1f, -1f, 1f);
+
+        TextMeshProUGUI tag = f.Text(row, "License", license, f.Assets.BodyMedium, 18f, UiTheme.TextDim, TextAlignmentOptions.MidlineRight);
+        UiFactory.Layout(tag, LICENSE_WIDTH, 26f);
     }
 
     private static RectTransform SettingRow(UiFactory f, RectTransform parent, string name, string label)

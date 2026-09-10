@@ -48,6 +48,7 @@ public static class UiScreenshotTool
     {
         Directory.CreateDirectory(outputDirectory);
         CaptureMainMenu(outputDirectory);
+        CaptureCalibration(outputDirectory);
         CaptureGame(outputDirectory);
         EditorSceneManager.OpenScene(MainMenuUiBuilder.SCENE_PATH, OpenSceneMode.Single);
     }
@@ -60,6 +61,7 @@ public static class UiScreenshotTool
         var menuSo = new SerializedObject(menu);
         var menuPanel = menuSo.FindProperty("_menuPanel").objectReferenceValue as GameObject;
         var settingsPanel = menuSo.FindProperty("_settingsPanel").objectReferenceValue as GameObject;
+        var creditsPanel = menuSo.FindProperty("_creditsPanel").objectReferenceValue as GameObject;
         Canvas canvas = menu.GetComponentInParent<Canvas>(true);
         Camera camera = SceneCamera();
 
@@ -71,6 +73,52 @@ public static class UiScreenshotTool
         menuPanel.SetActive(false);
         settingsPanel.SetActive(true);
         Capture(camera, canvas, Landscape, Path.Combine(outputDirectory, "menu_settings.png"));
+
+        if (creditsPanel == null) return;
+
+        settingsPanel.SetActive(false);
+        creditsPanel.SetActive(true);
+        Capture(camera, canvas, Landscape, Path.Combine(outputDirectory, "menu_credits.png"));
+    }
+
+    private static void CaptureCalibration(string outputDirectory)
+    {
+        if (!File.Exists(CalibrationSceneBuilder.SCENE_PATH)) return;
+
+        EditorSceneManager.OpenScene(CalibrationSceneBuilder.SCENE_PATH, OpenSceneMode.Single);
+
+        CalibrationController controller = Object.FindFirstObjectByType<CalibrationController>(FindObjectsInactive.Include);
+        if (controller == null) return;
+
+        Canvas canvas = controller.GetComponent<Canvas>();
+        Camera camera = SceneCamera();
+        var so = new SerializedObject(controller);
+        var infoPanel = so.FindProperty("_infoPanel").objectReferenceValue as GameObject;
+        var donePanel = so.FindProperty("_donePanel").objectReferenceValue as GameObject;
+        var promptCard = so.FindProperty("_promptCard").objectReferenceValue as GameObject;
+        var idleHint = so.FindProperty("_idleHint").objectReferenceValue as GameObject;
+
+        SetActive(infoPanel, false);
+        SetActive(donePanel, false);
+        SetActive(promptCard, false);
+        SetActive(idleHint, true);
+        Capture(camera, canvas, Landscape, Path.Combine(outputDirectory, "calibration.png"));
+
+        SetActive(idleHint, false);
+        SetActive(promptCard, true);
+        Capture(camera, canvas, Landscape, Path.Combine(outputDirectory, "calibration_prompt.png"));
+
+        SetActive(infoPanel, true);
+        Capture(camera, canvas, Landscape, Path.Combine(outputDirectory, "calibration_info.png"));
+
+        SetActive(infoPanel, false);
+        SetActive(donePanel, true);
+        Capture(camera, canvas, Landscape, Path.Combine(outputDirectory, "calibration_done.png"));
+    }
+
+    private static void SetActive(GameObject target, bool active)
+    {
+        if (target != null) target.SetActive(active);
     }
 
     private static void PopulateScoreboardPreview()
