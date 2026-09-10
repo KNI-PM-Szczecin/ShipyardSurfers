@@ -72,6 +72,7 @@ public class GameManager : MonoBehaviour
         if (_currentSpeed > MaxGameSpeed) { return; }
 
         _currentSpeed = _currentSpeed * _speedMultiplier;
+        WaterSpeed.instance.IncreaseSpeed(_speedMultiplier);
         SegmentMover.MoveSpeed = _currentSpeed;
         _lastSpeedChange = Time.time;
     }
