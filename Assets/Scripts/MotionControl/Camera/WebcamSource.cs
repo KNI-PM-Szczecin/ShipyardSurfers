@@ -22,6 +22,15 @@ public class WebcamSource : ICameraSource
 
     public bool IsRunning => _texture != null && _texture.isPlaying;
     public Texture Texture => _texture;
+
+    public string Diagnostics => _texture == null
+        ? $"no texture (devices: {DeviceNames().Length})"
+        : $"'{_texture.deviceName}' playing: {_texture.isPlaying}, {_texture.width}x{_texture.height}, " +
+          $"updates: {_texture.updateCount}, didUpdate: {_texture.didUpdateThisFrame}, " +
+          $"requested: {_requestedWidth}x{_requestedHeight}@{_requestedFps}, " +
+          $"authorized: {Application.HasUserAuthorization(UserAuthorization.WebCam)}, focused: {Application.isFocused}, " +
+          $"devices: [{string.Join(" | ", DeviceNames())}]";
+
     public bool VerticallyMirrored => _texture != null && _texture.videoVerticallyMirrored;
     public string ActiveDeviceName => _texture != null ? _texture.deviceName : null;
     public bool HasTexture => _texture != null;

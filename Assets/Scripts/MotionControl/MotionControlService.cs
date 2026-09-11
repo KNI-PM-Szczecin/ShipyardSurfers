@@ -11,6 +11,7 @@ public class MotionControlService : MonoBehaviour
     private const int TIMEOUTS_BEFORE_WORKER_REBUILD = 2;
     private const float CAMERA_RESTART_INTERVAL = 8f;
     private const float DEBUG_HEARTBEAT_INTERVAL = 0.1f;
+    private const float CAMERA_REPORT_INTERVAL = 2f;
 
     public static MotionControlService Instance { get; private set; }
 
@@ -50,7 +51,9 @@ public class MotionControlService : MonoBehaviour
     private int _inferenceTimeouts;
     private float _nextCameraRestart;
     private float _nextDebugHeartbeat;
+    private float _nextCameraReport;
     private bool _externalDemand;
+    private int _frameRateBeforePipeline;
 
     public bool IsPipelineWanted => (Settings != null && Settings.Enabled) || _externalDemand;
 
@@ -205,11 +208,14 @@ public class MotionControlService : MonoBehaviour
         _tracking.Enable(Time.unscaledTime);
         ResetRecognition();
         Application.runInBackground = true;
+        _frameRateBeforePipeline = Application.targetFrameRate;
+        Application.targetFrameRate = Config.FrameRateWhileTracking;
         _pipelineActive = true;
         _inferenceTimeouts = 0;
         _nextCameraRestart = Time.unscaledTime + CAMERA_RESTART_INTERVAL;
         State.Value = _tracking.State;
-        Debug.Log($"{nameof(MotionControlService)}: pipeline started, camera '{_camera.ActiveDeviceName ?? "none"}'", this);
+        Debug.Log($"{nameof(MotionControlService)}: pipeline started, camera '{_camera.ActiveDeviceName ?? "none"}', " +
+                  $"frame rate capped at {Config.FrameRateWhileTracking}", this);
     }
 
     private void RebuildRunner()
@@ -228,6 +234,7 @@ public class MotionControlService : MonoBehaviour
         _runner?.Dispose();
         _runner = null;
         ResetRecognition();
+        Application.targetFrameRate = _frameRateBeforePipeline;
         _pipelineActive = false;
         State.Value = TrackingState.Disabled;
         Debug.Log($"{nameof(MotionControlService)}: pipeline stopped", this);
@@ -248,7 +255,6 @@ public class MotionControlService : MonoBehaviour
         bool frameArrived = _camera.TryConsumeFrame();
 
         RecoverStalledInference(now);
-
         if (frameArrived && _runner.IsIdle)
         {
             _cropper.Blit(_camera.Texture, _camera.VerticallyMirrored);
@@ -275,7 +281,7 @@ public class MotionControlService : MonoBehaviour
         {
             if (previous == TrackingState.Tracking) ResetRecognition();
             State.Value = _tracking.State;
-            Debug.Log($"{nameof(MotionControlService)}: {previous} -> {_tracking.State} (camera running: {_camera.IsRunning}, inference idle: {_runner.IsIdle})", this);
+            Debug.Log($"{nameof(MotionControlService)}: t={now:0.00} {previous} -> {_tracking.State} (camera running: {_camera.IsRunning}, inference idle: {_runner.IsIdle})", this);
         }
 
         RecoverStalledCamera(now);
@@ -289,8 +295,17 @@ public class MotionControlService : MonoBehaviour
         }
 
         _emitter.Update(now);
+        ReportCamera(now);
         if (resultArrived) UpdateSnapshot(poseValid, now);
         PublishDebug(resultArrived, now);
+    }
+
+    private void ReportCamera(float now)
+    {
+        if (_tracking.State == TrackingState.Tracking || now < _nextCameraReport) return;
+
+        _nextCameraReport = now + CAMERA_REPORT_INTERVAL;
+        Debug.Log($"{nameof(MotionControlService)}: t={now:0.00} camera {_camera.Diagnostics}, state {_tracking.State}", this);
     }
 
     private void RecoverStalledInference(float now)

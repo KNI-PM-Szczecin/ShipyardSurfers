@@ -18,6 +18,8 @@ public class MotionControlConfig : ScriptableObject
     [SerializeField] private int _cameraWidth = 640;
     [SerializeField] private int _cameraHeight = 480;
     [SerializeField] private int _cameraFps = 30;
+    [SerializeField, Tooltip("Application.targetFrameRate while the camera pipeline runs; an uncapped player starves Media Foundation and the webcam stops delivering frames.")]
+    private int _frameRateWhileTracking = 60;
 
     [Header("Input")]
     [SerializeField] private float _buttonHoldDuration = 0.1f;
@@ -44,6 +46,7 @@ public class MotionControlConfig : ScriptableObject
     public int CameraWidth => _cameraWidth;
     public int CameraHeight => _cameraHeight;
     public int CameraFps => _cameraFps;
+    public int FrameRateWhileTracking => _frameRateWhileTracking;
 
     public float ButtonHoldDuration => _buttonHoldDuration;
 
