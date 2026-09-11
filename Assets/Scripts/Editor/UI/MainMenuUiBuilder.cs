@@ -356,6 +356,7 @@ public static class MainMenuUiBuilder
         AssetRow(f, card, "WatercraftKit", "Watercraft Kit · Kenney", "CC0 1.0");
         AssetRow(f, card, "FactoryKit", "Factory Kit · Kenney", "CC0 1.0");
         AssetRow(f, card, "Crane", "Dźwig · J-Toastie", "CC BY 3.0");
+        AssetRow(f, card, "Gulls", "Mewy · Poly by Google", "CC BY 3.0");
         AssetRow(f, card, "Skybox", "Fantasy Skybox FREE · Render Knight", "Asset Store EULA");
     }
 

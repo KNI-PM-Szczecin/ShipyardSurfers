@@ -44,6 +44,21 @@ public static class UiScreenshotTool
         }
     }
 
+    public static void CaptureMenuBatch()
+    {
+        try
+        {
+            string output = OutputDirectoryFromArguments();
+            Directory.CreateDirectory(output);
+            CaptureMainMenu(output);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            EditorApplication.Exit(1);
+        }
+    }
+
     public static void CaptureAll(string outputDirectory)
     {
         Directory.CreateDirectory(outputDirectory);

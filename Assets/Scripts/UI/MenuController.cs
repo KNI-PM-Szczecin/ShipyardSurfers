@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
@@ -31,6 +32,10 @@ public class MenuController : MonoBehaviour
     private GameObject _creditsPanel;
     [SerializeField]
     private GameObject _menuPanel;
+
+    [Space]
+    [SerializeField, Tooltip("Optional: snaps the crane rope when the game starts and delays the scene load until the container has fallen")]
+    private ContainerDrop _containerDrop;
 
 #if UNITY_EDITOR
     [Space]
@@ -118,7 +123,32 @@ public class MenuController : MonoBehaviour
         print("Debug: exit game");
     }
 
-    private void StartGame() => LoadScene(GameSceneName, nameof(GameSceneName));
+    private void StartGame()
+    {
+        if (_containerDrop == null || _containerDrop.HasDropped)
+        {
+            LoadScene(GameSceneName, nameof(GameSceneName));
+            return;
+        }
+
+        _containerDrop.Drop();
+        SetMenuInteractable(false);
+        StartCoroutine(LoadSceneAfter(GameSceneName, nameof(GameSceneName), _containerDrop.DropSeconds));
+    }
+
+    private IEnumerator LoadSceneAfter(string sceneName, string label, float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        LoadScene(sceneName, label);
+    }
+
+    private void SetMenuInteractable(bool interactable)
+    {
+        foreach (Button button in new[] { _startGameButton, _settingsButton, _creditsButton, _calibrationButton, _quitButton })
+        {
+            if (button != null) button.interactable = interactable;
+        }
+    }
 
     private void OpenCalibration() => LoadScene(CalibrationSceneName, nameof(CalibrationSceneName));
 

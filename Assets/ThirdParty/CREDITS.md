@@ -6,6 +6,8 @@
 | Watercraft Kit | Kenney | CC0 1.0 | https://kenney.nl/assets/watercraft-kit |
 | Factory Kit | Kenney | CC0 1.0 | https://kenney.nl/assets/factory-kit |
 | Crane | J-Toastie | CC BY 3.0 (attribution required) | https://poly.pizza/m/gCcpjaxFdv |
+| Flying gull | Poly by Google | CC BY 3.0 (attribution required) | https://poly.pizza/m/eMNhHDZakYp |
+| Seagull | Poly by Google | CC BY 3.0 (attribution required) | https://poly.pizza/m/0WRzrtCIIRp |
 | Fantasy Skybox FREE | Render Knight | Unity Asset Store EULA | https://assetstore.unity.com/packages/2d/textures-materials/sky/fantasy-skybox-free-18353 |
 
 Planned, not yet imported (requires a Sketchfab login to download):

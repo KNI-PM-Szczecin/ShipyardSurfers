@@ -35,6 +35,7 @@ public static class WorldBuildMenu
         ObstacleSetBuilder.BuildAll();
         ObstacleShowcaseSceneBuilder.Build();
         GameSceneSetupTool.Apply();
+        MenuSceneSetupTool.Apply();
         AssetDatabase.SaveAssets();
         Debug.Log($"{nameof(WorldBuildMenu)}: world rebuilt");
     }
@@ -47,6 +48,7 @@ public static class WorldBuildMenu
             ObstacleShowcaseSceneBuilder.Build();
             ObstacleShowcaseSceneBuilder.CaptureAll(ObstacleShowcaseSceneBuilder.OutputDirectoryFromArguments());
             GameSceneSetupTool.Apply();
+            MenuSceneSetupTool.Apply();
             AssetDatabase.SaveAssets();
         }
         catch (Exception exception)
