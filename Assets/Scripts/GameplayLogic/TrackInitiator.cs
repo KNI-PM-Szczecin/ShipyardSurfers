@@ -19,7 +19,14 @@ public class TrackInitiator : MonoBehaviour
     [SerializeField, Tooltip("Plain wall renderers hidden when the picked appearance brings its own wall segments")]
     private Renderer[] _defaultWallRenderers;
 
+    private static readonly HashSet<string> ReportedMissingPrefabs = new HashSet<string>();
+
     private readonly TrackDresser _dresser = new TrackDresser();
+
+    public SegmentContent Content { get; private set; }
+    public float LayoutSpeed { get; private set; }
+    public int ObstacleCells { get; private set; }
+    public int ObstaclesPlaced { get; private set; }
 
     private void Start() => StartCoroutine(BuildTrackRoutine());
 
@@ -31,10 +38,12 @@ public class TrackInitiator : MonoBehaviour
 
     private IEnumerator BuildTrackRoutine()
     {
-        var set = GenerationManager.Instance.GetRandomObsticles();
-        var look = GenerationManager.Instance.GetRandomApperence();
+        Content = GenerationManager.Instance.NextSegmentContent();
+        LayoutSpeed = TrackSpeed();
+        ObsticleSetSO set = Content.Obsticles;
+        TrackApperenceSO look = Content.Apperence;
 
-        if (set == null || look == null)
+        if (!Content.IsComplete)
         {
             Debug.LogError("WARNING: Null obsticle set or track apperence", this);
             yield break;
@@ -83,7 +92,6 @@ public class TrackInitiator : MonoBehaviour
     {
         var claimed = new bool[cols, ObsticleSetSO.ROWS];
         var obstacles = new GameObject[cols, ObsticleSetSO.ROWS];
-        int placed = 0;
 
         for (int y = 0; y < ObsticleSetSO.ROWS; y++)
             for (int x = 0; x < cols; x++)
@@ -91,10 +99,17 @@ public class TrackInitiator : MonoBehaviour
                 ObstacleCell cell = set.GetCell(x, y);
                 if (cell.Type == ObsticleType.Empty) continue;
 
+                ObstacleCells++;
                 GameObject prefab = cell.Type == ObsticleType.Blockade
                     ? look.GetBlockadePrefab(cell.BlockadeLength)
                     : look.GetObsticlePrefab(cell.Type);
-                if (prefab == null || LaneCenters[x] == null) continue;
+                if (prefab == null)
+                {
+                    WarnMissingPrefab(look, cell);
+                    continue;
+                }
+
+                if (LaneCenters[x] == null) continue;
 
                 Vector3 laneLocal = transform.InverseTransformPoint(LaneCenters[x].position);
                 float cellNearZ = zNearLocal + y * cellDepth;
@@ -116,11 +131,19 @@ public class TrackInitiator : MonoBehaviour
 
                 RegisterCoinPath(coinPaths, claimed, cell, x, y, obstacle, laneLocal.y, cellNearZ, cellDepth, zNearLocal);
 
-                placed++;
-                if (placed % PIECES_PER_STEP == 0) yield return null;
+                ObstaclesPlaced++;
+                if (ObstaclesPlaced % PIECES_PER_STEP == 0) yield return null;
             }
 
         OpenJoinedSideWalls(set, obstacles, cols);
+    }
+
+    private static void WarnMissingPrefab(TrackApperenceSO look, ObstacleCell cell)
+    {
+        string key = $"{look.name}/{cell.Type}/{cell.BlockadeLength}";
+        if (!ReportedMissingPrefabs.Add(key)) return;
+
+        Debug.LogWarning($"{nameof(TrackInitiator)}: appearance '{look.name}' has no prefab for {cell.Type} (length {cell.BlockadeLength}); those cells stay empty", look);
     }
 
     private static void OpenJoinedSideWalls(ObsticleSetSO set, GameObject[,] obstacles, int cols)
@@ -242,7 +265,7 @@ public class TrackInitiator : MonoBehaviour
         if (!ObstacleBoundsUtility.TryGetGameplayBounds(obstacle, out Bounds bounds)) return;
 
         JumpArc arc = MovmentController.Arc;
-        float speed = TrackSpeed();
+        float speed = LayoutSpeed;
         float peakZ = ToLocalZ(bounds.min.z);
         float startZ = peakZ - arc.RiseDistance(speed);
         float endZ = peakZ + arc.FallDistance(speed);

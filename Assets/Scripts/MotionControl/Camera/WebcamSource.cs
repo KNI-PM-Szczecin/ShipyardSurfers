@@ -22,6 +22,7 @@ public class WebcamSource : ICameraSource
 
     public bool IsRunning => _texture != null && _texture.isPlaying;
     public Texture Texture => _texture;
+    public long FrameCount => _texture != null ? _texture.updateCount : 0;
 
     public string Diagnostics => _texture == null
         ? $"no texture (devices: {DeviceNames().Length})"

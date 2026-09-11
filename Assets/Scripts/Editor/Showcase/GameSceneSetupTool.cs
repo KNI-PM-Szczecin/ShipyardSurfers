@@ -9,6 +9,7 @@ public static class GameSceneSetupTool
     public const string GAME_SCENE_PATH = "Assets/Scenes/GameScene.unity";
     private const string MENU_PATH = "Shipyard Surfers/World/Setup Game Scene (sea + skybox)";
     private const string SEA_NAME = "Sea";
+    private const string DEBUGGER_NAME = "ObstacleSetDebugger";
     private const string SEA_MATERIAL_PATH = "Assets/DemoMaterials/Water/Water.mat";
     private const int WATER_LAYER = 4;
     private const float SEA_Y = -0.8f;
@@ -33,11 +34,21 @@ public static class GameSceneSetupTool
 
         ApplyDistanceFog();
         EnsureSea();
+        EnsureObstacleSetDebugger();
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         Debug.Log($"{nameof(GameSceneSetupTool)}: {GAME_SCENE_PATH} updated (skybox: {(skybox != null ? skybox.name : "unchanged")}, " +
-                  $"fog: {FOG_START}-{FOG_END})");
+                  $"fog: {FOG_START}-{FOG_END}, '{DEBUGGER_NAME}' present and disabled)");
+    }
+
+    private static void EnsureObstacleSetDebugger()
+    {
+        GameObject holder = GameObject.Find(DEBUGGER_NAME);
+        if (holder == null) holder = new GameObject(DEBUGGER_NAME);
+        if (holder.TryGetComponent(out ObstacleSetDebugger _)) return;
+
+        holder.AddComponent<ObstacleSetDebugger>().enabled = false;
     }
 
     private static void ApplyDistanceFog()

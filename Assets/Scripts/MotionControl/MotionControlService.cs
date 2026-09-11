@@ -52,6 +52,7 @@ public class MotionControlService : MonoBehaviour
     private float _nextCameraRestart;
     private float _nextDebugHeartbeat;
     private float _nextCameraReport;
+    private long _lastReportedFrameCount = -1;
     private bool _externalDemand;
     private int _frameRateBeforePipeline;
 
@@ -209,13 +210,21 @@ public class MotionControlService : MonoBehaviour
         ResetRecognition();
         Application.runInBackground = true;
         _frameRateBeforePipeline = Application.targetFrameRate;
-        Application.targetFrameRate = Config.FrameRateWhileTracking;
+        int frameRate = TrackingFrameRate();
+        Application.targetFrameRate = frameRate;
+        _lastReportedFrameCount = -1;
         _pipelineActive = true;
         _inferenceTimeouts = 0;
         _nextCameraRestart = Time.unscaledTime + CAMERA_RESTART_INTERVAL;
         State.Value = _tracking.State;
         Debug.Log($"{nameof(MotionControlService)}: pipeline started, camera '{_camera.ActiveDeviceName ?? "none"}', " +
-                  $"frame rate capped at {Config.FrameRateWhileTracking}", this);
+                  $"frame rate capped at {frameRate}", this);
+    }
+
+    private int TrackingFrameRate()
+    {
+        int displayRefreshRate = Mathf.RoundToInt((float)Screen.currentResolution.refreshRateRatio.value);
+        return Mathf.Max(Config.FrameRateWhileTracking, displayRefreshRate);
     }
 
     private void RebuildRunner()
@@ -305,7 +314,13 @@ public class MotionControlService : MonoBehaviour
         if (_tracking.State == TrackingState.Tracking || now < _nextCameraReport) return;
 
         _nextCameraReport = now + CAMERA_REPORT_INTERVAL;
-        Debug.Log($"{nameof(MotionControlService)}: t={now:0.00} camera {_camera.Diagnostics}, state {_tracking.State}", this);
+        long frames = _camera.FrameCount;
+        bool stalled = frames == _lastReportedFrameCount;
+        _lastReportedFrameCount = frames;
+        if (!stalled) return;
+
+        Debug.LogWarning($"{nameof(MotionControlService)}: t={now:0.00} camera delivered no new frame for {CAMERA_REPORT_INTERVAL:0} s: " +
+                         $"{_camera.Diagnostics}, state {_tracking.State}", this);
     }
 
     private void RecoverStalledInference(float now)

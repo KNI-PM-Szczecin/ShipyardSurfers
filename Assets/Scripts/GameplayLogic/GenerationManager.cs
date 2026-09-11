@@ -17,13 +17,19 @@ public class GenerationManager
         }
     }
 
-    private const string OBSTICLE_SETS_FOLDER = "ObsticleSets";
-    private const string TRACK_APPERENCE_FOLDER = "TrackApperences";
+    public const string OBSTICLE_SETS_FOLDER = "ObsticleSets";
+    public const string TRACK_APPERENCE_FOLDER = "TrackApperences";
 
     private List<ObsticleSetSO> _obsticleSets;
     private List<TrackApperenceSO> _trackApperences;
     private int _lastObsticleIndex = -1;
     private int _lastApperenceIndex = -1;
+
+    public ISegmentContentOverride ContentOverride { get; set; }
+
+    public bool IsShipped(ObsticleSetSO set) => _obsticleSets.Contains(set);
+
+    public bool IsShipped(TrackApperenceSO look) => _trackApperences.Contains(look);
 
     public GenerationManager()
     {
@@ -48,8 +54,12 @@ public class GenerationManager
         return list[randomIndex];
     }
 
-    public ObsticleSetSO GetRandomObsticles() => GetRandomFromList(_obsticleSets, ref _lastObsticleIndex);
+    public SegmentContent NextSegmentContent()
+    {
+        var randomPick = new SegmentContent(
+            GetRandomFromList(_obsticleSets, ref _lastObsticleIndex),
+            GetRandomFromList(_trackApperences, ref _lastApperenceIndex));
 
-    public TrackApperenceSO GetRandomApperence() => GetRandomFromList(_trackApperences, ref _lastApperenceIndex);
-
+        return ContentOverride != null ? ContentOverride.Apply(randomPick) : randomPick;
+    }
 }
