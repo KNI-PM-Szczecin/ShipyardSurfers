@@ -732,6 +732,7 @@ GameObject:
   - component: {fileID: 722941635}
   - component: {fileID: 722941634}
   - component: {fileID: 722941633}
+  - component: {fileID: 722941636}
   m_Layer: 4
   m_Name: Sea
   m_TagString: Untagged
@@ -811,6 +812,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &722941636
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 722941632}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3ff2de5b7b72924495c99114572c9cb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WaterSpeed
+  maxSpeed: -0.75
+  minSpeed: -200
+  speed: -0.75
+  waterMaterial: {fileID: 2100000, guid: 06f3fcd6f415bc44b85530d15ec76c40, type: 2}
+  rend: {fileID: 0}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -2097,6 +2115,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 4891760629821328910, guid: 19f258978f1517d47bbe5f442401dce3, type: 3}
+      propertyPath: m_fontSize
+      value: 42.85
+      objectReference: {fileID: 0}
+    - target: {fileID: 4891760629821328910, guid: 19f258978f1517d47bbe5f442401dce3, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4293322470
+      objectReference: {fileID: 0}
+    - target: {fileID: 4891760629821328910, guid: 19f258978f1517d47bbe5f442401dce3, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 6422236425968846130, guid: 19f258978f1517d47bbe5f442401dce3, type: 3}
       propertyPath: m_LocalPosition.x
       value: 484.06952
@@ -2140,6 +2170,14 @@ PrefabInstance:
     - target: {fileID: 6636937968765547911, guid: 19f258978f1517d47bbe5f442401dce3, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 1.6000977
+      objectReference: {fileID: 0}
+    - target: {fileID: 7560806660176958984, guid: 19f258978f1517d47bbe5f442401dce3, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 3001476838
+      objectReference: {fileID: 0}
+    - target: {fileID: 7560806660176958984, guid: 19f258978f1517d47bbe5f442401dce3, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
       objectReference: {fileID: 0}
     - target: {fileID: 8609777038671062975, guid: 19f258978f1517d47bbe5f442401dce3, type: 3}
       propertyPath: m_Name

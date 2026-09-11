@@ -3,14 +3,15 @@ using UnityEngine;
 public class WaterSpeed : MonoBehaviour
 {
     public static WaterSpeed instance;
-    [SerializeField] private float maxSpeed = -.3f;
-    [SerializeField] private float minSpeed = -2f;
+    [SerializeField] private float maxSpeed = -1f;
+    [SerializeField] private float minSpeed = -200f;
     [SerializeField] private float speed = -0.3f;
     private Vector4 speedVector = new Vector4(0, 0, 0, 0);
     [SerializeField] private Material waterMaterial = null;
-    private Material newWater = null;
     public Renderer rend = null;
     private float time;
+    private float lerpSpeed = 1f;
+    private float s = 0f;
 
     private void Awake()
     {
@@ -19,7 +20,6 @@ public class WaterSpeed : MonoBehaviour
             instance = this;
             rend = GetComponent<Renderer>();
             readMaterial();
-            
         }
         else
         {
@@ -29,34 +29,27 @@ public class WaterSpeed : MonoBehaviour
 
     private void Update()
     {
-        waterMaterial.Lerp(waterMaterial, newWater, Mathf.Clamp01((Time.time - time)*2)* 1f);
+        s = Mathf.Lerp(speedVector.y, speed, Mathf.Pow(Mathf.Clamp01((Time.time - time) * lerpSpeed), .5f));
+        speedVector.y = s;
+        Debug.Log("Speed: " + speed + " Vector: " + speedVector + " S: " + s + " Lerp: " + Mathf.Clamp01((Time.time - time) * lerpSpeed));
+        waterMaterial.SetVector("_SurfaceNoiseScroll", speedVector);
     }
 
     private void setMaterial()
     {
-        Debug.Log(waterMaterial);
-        waterMaterial = GetComponent<Renderer>().material;
-        Debug.Log(waterMaterial);
+        waterMaterial = rend.material;
     }
 
     private void readMaterial()
     {
-        newWater = Instantiate(waterMaterial);
         if (waterMaterial != null)
         {
             speedVector = waterMaterial.GetVector("_SurfaceNoiseScroll");
-            // Debug.Log("WaterSpeed: " + speedVector);
             speed = speedVector.y;
         }
     }
 
-    private void UpdateMaterial()
-    {
-        newWater = Instantiate(waterMaterial);
-        time = Time.time;
-    }
-
-    private void SetSpeed(float newSpeed)
+    private void UpdateSpeed(float newSpeed)
     {
         if (newSpeed < minSpeed) {
             newSpeed = minSpeed;
@@ -65,18 +58,30 @@ public class WaterSpeed : MonoBehaviour
             newSpeed = maxSpeed;
         }
         speed = newSpeed;
-        speedVector.y = speed;
-        newWater.SetVector("_SurfaceNoiseScroll", speedVector);
+        // speedVector.y = speed;
+        time = Time.time;
     }
 
     public void IncreaseSpeed(float multiplier)
     {
-        SetSpeed(speed * multiplier);
+        UpdateSpeed(speed * multiplier);
     }
 
+    public void SetSpeed(float newSpeed)
+    {
+        speed = newSpeed;
+        speedVector.y = speed;
+        waterMaterial.SetVector("_SurfaceNoiseScroll", speedVector);
+        time = 0;
+    }
     public void ResetSpeed()
     {
-        SetSpeed(-0.3f);
+        SetSpeed(maxSpeed);
+    }
+
+    public void SetInterval(float interval)
+    {
+        lerpSpeed = 1f / interval;
     }
 
     public float GetSpeed()

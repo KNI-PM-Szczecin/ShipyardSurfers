@@ -50,6 +50,8 @@ public class GameManager : MonoBehaviour
         _currentSpeed = motionControl ? MotionControlStartGameSpeed : StartGameSpeed;
         _speedMultiplier = motionControl ? MotionControlGameSpeedMultiplayer : GameSpeedMultiplayer;
         SegmentMover.MoveSpeed = _currentSpeed;
+        WaterSpeed.instance.ResetSpeed();
+        WaterSpeed.instance.SetInterval(SPEED_CHANGE_INTERVAL);
         _lastSpeedChange = Time.time;
 
         EventBus.DeathEvent += StopGame;
