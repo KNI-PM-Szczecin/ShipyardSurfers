@@ -5,7 +5,7 @@ using UnityEngine;
 public class TrackInitiator : MonoBehaviour
 {
     private const int PIECES_PER_STEP = 16;
-    private const int COINS_PER_CELL = 3;
+    private const int COINS_PER_CELL = 4;
     private const float COIN_BASE_Y_OFFSET = 1f;
     private const float COIN_SURFACE_Y_OFFSET = 0.5f;
     private const float COIN_UNDER_Y_OFFSET = 0.85f;
@@ -19,12 +19,16 @@ public class TrackInitiator : MonoBehaviour
     [SerializeField, Tooltip("Plain wall renderers hidden when the picked appearance brings its own wall segments")]
     private Renderer[] _defaultWallRenderers;
 
+    [SerializeField, Tooltip("Layout used instead of the random pick; the first segment uses the empty start stretch so nothing spawns on the player")]
+    private ObsticleSetSO _layoutOverride;
+
     private static readonly HashSet<string> ReportedMissingPrefabs = new HashSet<string>();
 
     private readonly TrackDresser _dresser = new TrackDresser();
 
     public SegmentContent Content { get; private set; }
     public float LayoutSpeed { get; private set; }
+    public bool HasLayoutOverride => _layoutOverride != null;
     public int ObstacleCells { get; private set; }
     public int ObstaclesPlaced { get; private set; }
 
@@ -39,6 +43,7 @@ public class TrackInitiator : MonoBehaviour
     private IEnumerator BuildTrackRoutine()
     {
         Content = GenerationManager.Instance.NextSegmentContent();
+        if (_layoutOverride != null) Content = Content.WithObsticles(_layoutOverride);
         LayoutSpeed = TrackSpeed();
         ObsticleSetSO set = Content.Obsticles;
         TrackApperenceSO look = Content.Apperence;

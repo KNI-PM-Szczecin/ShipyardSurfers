@@ -11,10 +11,40 @@ public static class EventBus
     public static event Action<PowerUpEffect> PowerUpActivatedEvent;
     public static event Action<PowerUpEffect> PowerUpDeactivatedEvent;
     public static event Action<GestureType> GestureDetectedEvent;
+    public static event Action<int> PlayerLaneChangeStartedEvent;
+    public static event Action PlayerJumpStartedEvent;
+    public static event Action PlayerRollStartedEvent;
+    public static event Action PlayerRollEndedEvent;
+    public static event Action<bool> PlayerGroundedChangedEvent;
 
     public static void PlayerDeath()
     {
         DeathEvent?.Invoke();
+    }
+
+    public static void PlayerLaneChangeStarted(int direction)
+    {
+        PlayerLaneChangeStartedEvent?.Invoke(direction);
+    }
+
+    public static void PlayerJumpStarted()
+    {
+        PlayerJumpStartedEvent?.Invoke();
+    }
+
+    public static void PlayerRollStarted()
+    {
+        PlayerRollStartedEvent?.Invoke();
+    }
+
+    public static void PlayerRollEnded()
+    {
+        PlayerRollEndedEvent?.Invoke();
+    }
+
+    public static void PlayerGroundedChanged(bool grounded)
+    {
+        PlayerGroundedChangedEvent?.Invoke(grounded);
     }
 
     public static void WallSideHit(bool isOnRight)

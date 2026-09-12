@@ -184,6 +184,7 @@ public class MovmentController : MonoBehaviour
         _trackChangeLock = true;
         _lastChangeIncrement = increment;
         _trackChangeCoroutine = StartCoroutine(ChangeTrackRoutine(_trackTransforms[targetTrack].position.x, duration));
+        EventBus.PlayerLaneChangeStarted(increment ? 1 : -1);
     }
 
     private int FindNeighbouringTrack(float x, bool increment)
@@ -318,7 +319,19 @@ public class MovmentController : MonoBehaviour
         _jumpTargetHeight = _jumpHeight * JumpHeightMultiplier;
         _jumpRiseDuration = _jumpDuration * JumpHeightMultiplier;
         _jumpElapsed = 0f;
-        _verticalState = VerticalState.Jumping;
+        SetVerticalState(VerticalState.Jumping);
+        EventBus.PlayerJumpStarted();
+    }
+
+    private static bool IsGrounded(VerticalState state) => state == VerticalState.Grounded || state == VerticalState.Rolling;
+
+    private void SetVerticalState(VerticalState state)
+    {
+        bool wasGrounded = IsGrounded(_verticalState);
+        _verticalState = state;
+
+        bool grounded = IsGrounded(state);
+        if (grounded != wasGrounded) EventBus.PlayerGroundedChanged(grounded);
     }
 
     private void TryStartRoll()
@@ -362,7 +375,7 @@ public class MovmentController : MonoBehaviour
     private void StartFall(float speedMultiplier)
     {
         _fallSpeedMultiplier = speedMultiplier;
-        _verticalState = VerticalState.Falling;
+        SetVerticalState(VerticalState.Falling);
     }
 
     private void CancelJumpIfAirborne()
@@ -391,7 +404,7 @@ public class MovmentController : MonoBehaviour
         SetY(hit.StandingY);
         _standingY = hit.StandingY;
         _fallSpeedMultiplier = 1f;
-        _verticalState = VerticalState.Grounded;
+        SetVerticalState(VerticalState.Grounded);
 
         if (_rollQueued)
         {
@@ -409,7 +422,8 @@ public class MovmentController : MonoBehaviour
         _rollProfile = new RollProfile(_rollDuration, _rollHoldDuration, _rollHeight);
         _standingY = transform.position.y;
         _rollElapsed = 0f;
-        _verticalState = VerticalState.Rolling;
+        SetVerticalState(VerticalState.Rolling);
+        EventBus.PlayerRollStarted();
     }
 
     private void UpdateRolling(float deltaTime)
@@ -446,7 +460,8 @@ public class MovmentController : MonoBehaviour
     private void EndRoll()
     {
         SetY(_standingY);
-        _verticalState = VerticalState.Grounded;
+        SetVerticalState(VerticalState.Grounded);
+        EventBus.PlayerRollEnded();
     }
 
     private void SetY(float y) =>

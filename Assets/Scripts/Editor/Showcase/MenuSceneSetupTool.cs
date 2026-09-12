@@ -733,16 +733,7 @@ public static class MenuSceneSetupTool
         return peaks;
     }
 
-    private static void EnsureFolder(string folder)
-    {
-        if (AssetDatabase.IsValidFolder(folder)) return;
-
-        string parent = System.IO.Path.GetDirectoryName(folder)?.Replace('\\', '/');
-        if (string.IsNullOrEmpty(parent)) return;
-
-        EnsureFolder(parent);
-        AssetDatabase.CreateFolder(parent, System.IO.Path.GetFileName(folder));
-    }
+    private static void EnsureFolder(string folder) => AssetFolders.Ensure(folder);
 
     private static void ScaleToWorldSize(GameObject model, Vector3 targetSize)
     {

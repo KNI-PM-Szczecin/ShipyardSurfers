@@ -12,6 +12,8 @@ public static class PlaySmokeTest
     private const string PENDING_MARKER = "Library/PlaySmokeTestPending";
     private const string RUN_SECONDS_ARGUMENT = "-smokeSeconds";
     private const string SHOT_ARGUMENT = "-smokeShot";
+    private const string START_SHOT_ARGUMENT = "-smokeStartShot";
+    private const float START_SHOT_SECONDS = 1.5f;
     private const string FORCED_SET_ARGUMENT = "-smokeSet";
     private const string FORCED_LOOK_ARGUMENT = "-smokeLook";
     private const char NAME_SEPARATOR = ',';
@@ -40,6 +42,7 @@ public static class PlaySmokeTest
     private static float _runSeconds;
     private static bool _armed;
     private static bool _shotCaptured;
+    private static bool _startShotCaptured;
     private static bool _recycleRequested;
     private static TrackInitiator _recycledSegment;
     private static int _recycledPieces;
@@ -182,12 +185,18 @@ public static class PlaySmokeTest
         TrackPlayer((float)elapsed);
         TrackFrameTime(elapsed);
 
+        if (!_startShotCaptured && elapsed >= START_SHOT_SECONDS)
+        {
+            _startShotCaptured = true;
+            CaptureShot(START_SHOT_ARGUMENT);
+        }
+
         if (elapsed >= _runSeconds * RECYCLE_AT_FRACTION)
         {
             if (!_shotCaptured)
             {
                 _shotCaptured = true;
-                CaptureShot();
+                CaptureShot(SHOT_ARGUMENT);
             }
 
             if (!_recycleRequested) RequestRecycle();
@@ -348,9 +357,9 @@ public static class PlaySmokeTest
         if (_fellAt >= 0f) Problems.Add($"player fell below the track {_fellAt:0.0} s into the run");
     }
 
-    private static void CaptureShot()
+    private static void CaptureShot(string argument)
     {
-        string path = ArgumentValue(SHOT_ARGUMENT);
+        string path = ArgumentValue(argument);
         if (string.IsNullOrEmpty(path)) return;
 
         Camera camera = Camera.main;
@@ -411,7 +420,7 @@ public static class PlaySmokeTest
         foreach (TrackInitiator segment in Object.FindObjectsByType<TrackInitiator>(FindObjectsSortMode.None))
         {
             SegmentContent content = segment.Content;
-            if (!content.IsComplete) continue;
+            if (!content.IsComplete || segment.HasLayoutOverride) continue;
 
             built++;
             bool layoutOk = !debugger.ForcesObstacleSets || debugger.Contains(content.Obsticles);
