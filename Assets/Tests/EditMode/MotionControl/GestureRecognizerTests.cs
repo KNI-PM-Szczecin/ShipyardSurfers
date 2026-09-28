@@ -303,6 +303,39 @@ public class GestureRecognizerTests
     }
 
     [Test]
+    public void AtLowPoseRate_JumpFiresOnFirstRaisedSample()
+    {
+        var frames = new PoseSequenceBuilder(0.25f)
+            .Hold(ReadyLeft, ReadyRight, 0.75f)
+            .Move(ReadyLeft, ReadyRight, RaisedLeft, RaisedRight, 0.25f)
+            .Frames;
+
+        Assert.That(frames.Count, Is.EqualTo(4));
+        Assert.That(Run(CreateRecognizer(), frames), Is.EqualTo(new[] { GestureType.Jump }));
+    }
+
+    [Test]
+    public void AtLowPoseRate_RollFiresOnFirstDroppedSample()
+    {
+        var frames = new PoseSequenceBuilder(0.25f)
+            .Hold(ReadyLeft, ReadyRight, 0.75f)
+            .Move(ReadyLeft, ReadyRight, DroppedLeft, DroppedRight, 0.25f)
+            .Frames;
+
+        Assert.That(Run(CreateRecognizer(), frames), Is.EqualTo(new[] { GestureType.Roll }));
+    }
+
+    [Test]
+    public void AtFullPoseRate_SingleRaisedSampleIsNotEnough()
+    {
+        var frames = Ready()
+            .Move(ReadyLeft, ReadyRight, RaisedLeft, RaisedRight, PoseSequenceBuilder.FRAME_INTERVAL)
+            .Frames;
+
+        Assert.That(Run(CreateRecognizer(), frames), Is.Empty);
+    }
+
+    [Test]
     public void InvalidPoses_AreIgnored()
     {
         var recognizer = CreateRecognizer();

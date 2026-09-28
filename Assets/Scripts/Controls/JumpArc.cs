@@ -23,8 +23,6 @@ public readonly struct JumpArc
 
     public float FallDistance(float trackSpeed) => Height / FallSpeed * trackSpeed;
 
-    public float TotalDistance(float trackSpeed) => RiseDistance(trackSpeed) + FallDistance(trackSpeed);
-
     public float HeightAt(float distanceFromStart, float trackSpeed)
     {
         if (distanceFromStart <= 0f) return 0f;

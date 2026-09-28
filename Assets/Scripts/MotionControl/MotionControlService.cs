@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Threading.Tasks;
 using Unity.InferenceEngine;
@@ -12,6 +13,10 @@ public class MotionControlService : MonoBehaviour
     private const float CAMERA_RESTART_INTERVAL = 8f;
     private const float DEBUG_HEARTBEAT_INTERVAL = 0.1f;
     private const float CAMERA_REPORT_INTERVAL = 2f;
+    private const int BACKEND_WARMUP_SAMPLES = 4;
+    private const int BACKEND_TRIAL_SAMPLES = 12;
+    private const float BACKEND_REQUIRED_GAIN = 0.2f;
+    private const int MAX_RUNNER_ATTEMPTS = 3;
 
     public static MotionControlService Instance { get; private set; }
 
@@ -30,6 +35,8 @@ public class MotionControlService : MonoBehaviour
     private SquareCropBlitter _cropper;
     private PoseModelRunner _runner;
     private Model _model;
+    private DispatchPlanner _planner;
+    private BackendSelector<BackendType> _selector;
     private YoloPoseDecoder _decoder;
     private PoseNormalizer _normalizer;
     private PoseSmoother _smoother;
@@ -53,6 +60,10 @@ public class MotionControlService : MonoBehaviour
     private float _nextDebugHeartbeat;
     private float _nextCameraReport;
     private long _lastReportedFrameCount = -1;
+    private long _lastInferredFrame = -1;
+    private float _lastInferenceMs;
+    private int _lastDispatchFrames;
+    private bool _selectionLogged;
     private bool _externalDemand;
     private int _frameRateBeforePipeline;
 
@@ -104,7 +115,7 @@ public class MotionControlService : MonoBehaviour
         if (!_pipelineActive || !_camera.HasTexture || _camera.IsRunning) return;
 
         _camera.Resume();
-        _tracking.NotifyCameraStarted(Time.unscaledTime);
+        OnCameraStarted(Time.unscaledTime);
         Debug.Log($"{nameof(MotionControlService)}: camera resumed after loading scene '{scene.name}'", this);
     }
 
@@ -117,6 +128,7 @@ public class MotionControlService : MonoBehaviour
     {
         _camera = new WebcamSource(Config.CameraWidth, Config.CameraHeight, Config.CameraFps);
         _cropper = new SquareCropBlitter(Config.InputSize);
+        _planner = new DispatchPlanner(Config.DispatchWindowSeconds);
         _decoder = new YoloPoseDecoder(Config.MinPersonConfidence);
         _normalizer = new PoseNormalizer(Config.Validity);
         _smoother = new PoseSmoother(Config.Smoothing, KeypointIndex.UpperBody);
@@ -162,7 +174,7 @@ public class MotionControlService : MonoBehaviour
         else if (_camera.ActiveDeviceName != Settings.CameraName && !string.IsNullOrEmpty(Settings.CameraName))
         {
             _camera.Stop();
-            _tracking.NotifyCameraStarted(Time.unscaledTime);
+            OnCameraStarted(Time.unscaledTime);
             yield return null;
             _camera.Start(Settings.CameraName);
             ResetRecognition();
@@ -199,7 +211,57 @@ public class MotionControlService : MonoBehaviour
             }
         }
 
-        _runner = new PoseModelRunner(_model, Config.InputSize, Config.LayersPerFrame, Config.Backend);
+        if (_selector == null) _selector = CreateSelector();
+        CreateRunner();
+    }
+
+    private BackendSelector<BackendType> CreateSelector()
+    {
+        BackendType preferred = SupportedBackend(Config.Backend);
+        BackendType[] candidates = Config.AutoSelectBackend
+            ? new[] { preferred, AlternateOf(preferred) }
+            : new[] { preferred };
+        _selectionLogged = candidates.Length == 1;
+        return new BackendSelector<BackendType>(candidates, BACKEND_WARMUP_SAMPLES, BACKEND_TRIAL_SAMPLES, BACKEND_REQUIRED_GAIN);
+    }
+
+    private static BackendType SupportedBackend(BackendType backend)
+    {
+        if (backend == BackendType.GPUCompute && !SystemInfo.supportsComputeShaders) return BackendType.GPUPixel;
+        return backend;
+    }
+
+    private static BackendType AlternateOf(BackendType backend)
+    {
+        if (backend != BackendType.CPU) return BackendType.CPU;
+        return SupportedBackend(BackendType.GPUCompute);
+    }
+
+    private void CreateRunner()
+    {
+        for (int attempt = 0; attempt < MAX_RUNNER_ATTEMPTS; attempt++)
+        {
+            BackendType backend = _selector.Current;
+            try
+            {
+                _runner = new PoseModelRunner(_model, Config.InputSize, backend, _planner);
+                return;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"{nameof(MotionControlService)}: backend {backend} unavailable ({exception.Message})", this);
+                if (!_selector.ReportFailure()) break;
+            }
+        }
+
+        Debug.LogError($"{nameof(MotionControlService)}: no usable inference backend", this);
+    }
+
+    private void RebuildRunner()
+    {
+        _runner?.Dispose();
+        _runner = null;
+        if (_model != null) CreateRunner();
     }
 
     private void StartPipeline()
@@ -207,6 +269,7 @@ public class MotionControlService : MonoBehaviour
         _camera.Start(Settings.CameraName);
         _emitter.Attach();
         _tracking.Enable(Time.unscaledTime);
+        _lastInferredFrame = -1;
         ResetRecognition();
         Application.runInBackground = true;
         _frameRateBeforePipeline = Application.targetFrameRate;
@@ -218,19 +281,14 @@ public class MotionControlService : MonoBehaviour
         _nextCameraRestart = Time.unscaledTime + CAMERA_RESTART_INTERVAL;
         State.Value = _tracking.State;
         Debug.Log($"{nameof(MotionControlService)}: pipeline started, camera '{_camera.ActiveDeviceName ?? "none"}', " +
-                  $"frame rate capped at {frameRate}", this);
+                  $"frame rate capped at {frameRate}, backend {_runner.Backend} ({_runner.LayerCount} layers, " +
+                  $"dispatch window {Config.DispatchWindowSeconds * 1000f:0} ms, auto-select {Config.AutoSelectBackend})", this);
     }
 
     private int TrackingFrameRate()
     {
         int displayRefreshRate = Mathf.RoundToInt((float)Screen.currentResolution.refreshRateRatio.value);
         return Mathf.Max(Config.FrameRateWhileTracking, displayRefreshRate);
-    }
-
-    private void RebuildRunner()
-    {
-        _runner?.Dispose();
-        _runner = _model != null ? new PoseModelRunner(_model, Config.InputSize, Config.LayersPerFrame, Config.Backend) : null;
     }
 
     private void StopPipeline()
@@ -256,20 +314,21 @@ public class MotionControlService : MonoBehaviour
         _normalizer.Reset();
     }
 
+    private void OnCameraStarted(float now)
+    {
+        _lastInferredFrame = -1;
+        _tracking.NotifyCameraStarted(now);
+    }
+
     private void Update()
     {
         if (!_pipelineActive || _runner == null) return;
 
         float now = Time.unscaledTime;
         bool frameArrived = _camera.TryConsumeFrame();
+        _planner.ReportFrameTime(Time.unscaledDeltaTime);
 
         RecoverStalledInference(now);
-        if (frameArrived && _runner.IsIdle)
-        {
-            _cropper.Blit(_camera.Texture, _camera.VerticallyMirrored);
-            _runner.Begin(_cropper.Target, now);
-        }
-
         _runner.Step();
 
         bool resultArrived = _runner.TryTakeResult(now, out float[] output, out int anchorCount);
@@ -278,11 +337,16 @@ public class MotionControlService : MonoBehaviour
         if (resultArrived)
         {
             _inferenceTimeouts = 0;
+            _lastInferenceMs = _runner.LastInferenceMs;
+            _lastDispatchFrames = _runner.LastDispatchFrames;
             TrackFps(now);
             _decoder.TryDecode(output, anchorCount, _runner.InputSize, _runner.InputSize, now, _frame);
             poseValid = _normalizer.TryNormalize(_frame, _pose);
             if (poseValid) _smoother.Smooth(_pose);
+            ApplyBackendTrial(_lastInferenceMs);
         }
+
+        StartInferenceIfReady(now);
 
         TrackingState previous = _tracking.State;
         _tracking.Update(now, frameArrived, resultArrived, poseValid);
@@ -290,7 +354,7 @@ public class MotionControlService : MonoBehaviour
         {
             if (previous == TrackingState.Tracking) ResetRecognition();
             State.Value = _tracking.State;
-            Debug.Log($"{nameof(MotionControlService)}: t={now:0.00} {previous} -> {_tracking.State} (camera running: {_camera.IsRunning}, inference idle: {_runner.IsIdle})", this);
+            Debug.Log($"{nameof(MotionControlService)}: t={now:0.00} {previous} -> {_tracking.State} (camera running: {_camera.IsRunning}, inference idle: {_runner == null || _runner.IsIdle})", this);
         }
 
         RecoverStalledCamera(now);
@@ -307,6 +371,33 @@ public class MotionControlService : MonoBehaviour
         ReportCamera(now);
         if (resultArrived) UpdateSnapshot(poseValid, now);
         PublishDebug(resultArrived, now);
+    }
+
+    private void StartInferenceIfReady(float now)
+    {
+        if (_runner == null || !_runner.IsIdle || !_camera.HasFrameNewerThan(_lastInferredFrame)) return;
+
+        _lastInferredFrame = _camera.FrameCount;
+        _cropper.Blit(_camera.Texture, _camera.VerticallyMirrored);
+        _runner.Begin(_cropper.Target, now);
+    }
+
+    private void ApplyBackendTrial(float latencyMs)
+    {
+        if (_selector.IsDecided && _selectionLogged) return;
+
+        bool changed = _selector.ReportLatency(latencyMs);
+        if (changed) RebuildRunner();
+
+        if (_selector.IsDecided)
+        {
+            _selectionLogged = true;
+            Debug.Log($"{nameof(MotionControlService)}: inference backend chosen by measured pose latency: {_selector.Summary()}", this);
+        }
+        else if (changed)
+        {
+            Debug.Log($"{nameof(MotionControlService)}: measuring inference backend {_selector.Current}", this);
+        }
     }
 
     private void ReportCamera(float now)
@@ -336,9 +427,13 @@ public class MotionControlService : MonoBehaviour
             return;
         }
 
+        BackendType stalled = _runner.Backend;
+        bool backendDropped = !_selector.IsDecided && _selector.ReportFailure();
         RebuildRunner();
         _inferenceTimeouts = 0;
-        Debug.LogWarning($"{nameof(MotionControlService)}: inference stalled repeatedly, worker rebuilt", this);
+        Debug.LogWarning(backendDropped
+            ? $"{nameof(MotionControlService)}: inference stalled repeatedly on {stalled}, backend dropped from the trial, now {_selector.Current}"
+            : $"{nameof(MotionControlService)}: inference stalled repeatedly, worker rebuilt", this);
     }
 
     private void RecoverStalledCamera(float now)
@@ -349,7 +444,7 @@ public class MotionControlService : MonoBehaviour
         {
             _nextCameraRestart = now + CAMERA_RESTART_INTERVAL;
             _camera.Resume();
-            _tracking.NotifyCameraStarted(now);
+            OnCameraStarted(now);
             Debug.LogWarning($"{nameof(MotionControlService)}: camera stopped playing, resumed", this);
             return;
         }
@@ -358,7 +453,7 @@ public class MotionControlService : MonoBehaviour
 
         _nextCameraRestart = now + CAMERA_RESTART_INTERVAL;
         _camera.Start(Settings.CameraName);
-        _tracking.NotifyCameraStarted(now);
+        OnCameraStarted(now);
         Debug.LogWarning($"{nameof(MotionControlService)}: no camera frames, camera restarted ('{_camera.ActiveDeviceName ?? "none"}')", this);
     }
 
@@ -393,7 +488,9 @@ public class MotionControlService : MonoBehaviour
         _snapshot.ArmedHorizontal = _recognizer.IsArmed(GestureChannel.Horizontal);
         _snapshot.Mirror = Settings.MirrorHorizontal;
         _snapshot.PoseFps = _poseFps;
-        _snapshot.InferenceMs = _runner.LastInferenceMs;
+        _snapshot.InferenceMs = _lastInferenceMs;
+        _snapshot.DispatchFrames = _lastDispatchFrames;
+        _snapshot.Backend = _runner != null ? _runner.Backend.ToString() : "none";
         _snapshot.Now = now;
         _snapshot.BoundingBox = _frame.HasPerson ? _cropper.ModelToCamera(_frame.BoundingBox) : default;
 

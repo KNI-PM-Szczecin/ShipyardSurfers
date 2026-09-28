@@ -34,12 +34,6 @@ public class TrackInitiator : MonoBehaviour
 
     private void Start() => StartCoroutine(BuildTrackRoutine());
 
-    public void BuildTrack()
-    {
-        IEnumerator steps = BuildTrackRoutine();
-        while (steps.MoveNext()) { }
-    }
-
     private IEnumerator BuildTrackRoutine()
     {
         Content = GenerationManager.Instance.NextSegmentContent();

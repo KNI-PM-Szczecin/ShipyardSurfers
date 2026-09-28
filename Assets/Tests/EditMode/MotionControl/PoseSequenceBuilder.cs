@@ -8,8 +8,14 @@ public class PoseSequenceBuilder
     public const float DEFAULT_SHOULDER_WIDTH = 0.25f;
 
     private readonly List<NormalizedPose> _frames = new List<NormalizedPose>();
+    private readonly float _frameInterval;
     private float _time;
     private Vector2 _shoulderCenter = new Vector2(0.5f, 0.4f);
+
+    public PoseSequenceBuilder(float frameInterval = FRAME_INTERVAL)
+    {
+        _frameInterval = frameInterval;
+    }
 
     public IReadOnlyList<NormalizedPose> Frames => _frames;
 
@@ -21,14 +27,14 @@ public class PoseSequenceBuilder
 
     public PoseSequenceBuilder Hold(Vector2 leftWrist, Vector2 rightWrist, float duration)
     {
-        int frames = Mathf.Max(1, Mathf.RoundToInt(duration / FRAME_INTERVAL));
+        int frames = Mathf.Max(1, Mathf.RoundToInt(duration / _frameInterval));
         for (int i = 0; i < frames; i++) Add(leftWrist, rightWrist);
         return this;
     }
 
     public PoseSequenceBuilder Move(Vector2 leftFrom, Vector2 rightFrom, Vector2 leftTo, Vector2 rightTo, float duration)
     {
-        int frames = Mathf.Max(1, Mathf.RoundToInt(duration / FRAME_INTERVAL));
+        int frames = Mathf.Max(1, Mathf.RoundToInt(duration / _frameInterval));
         for (int i = 1; i <= frames; i++)
         {
             float t = (float)i / frames;
@@ -40,7 +46,7 @@ public class PoseSequenceBuilder
     public PoseSequenceBuilder MoveWithBody(Vector2 leftFrom, Vector2 rightFrom, Vector2 leftTo, Vector2 rightTo, Vector2 shoulderDelta, float duration)
     {
         Vector2 shoulderStart = _shoulderCenter;
-        int frames = Mathf.Max(1, Mathf.RoundToInt(duration / FRAME_INTERVAL));
+        int frames = Mathf.Max(1, Mathf.RoundToInt(duration / _frameInterval));
         for (int i = 1; i <= frames; i++)
         {
             float t = (float)i / frames;
@@ -87,7 +93,7 @@ public class PoseSequenceBuilder
 
     private void Add(Vector2 leftWrist, Vector2 rightWrist)
     {
-        _time += FRAME_INTERVAL;
+        _time += _frameInterval;
         _frames.Add(Create(leftWrist, rightWrist, _time, _shoulderCenter));
     }
 }

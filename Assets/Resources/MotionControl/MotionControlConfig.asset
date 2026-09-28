@@ -15,8 +15,9 @@ MonoBehaviour:
   _model: {fileID: 0}
   _modelResourcePath: MotionControl/yolo26n-pose-320
   _inputSize: 320
-  _layersPerFrame: 40
-  _backend: 1
+  _dispatchWindowMs: 30
+  _backend: 256
+  _autoSelectBackend: 1
   _minPersonConfidence: 0.5
   _cameraWidth: 640
   _cameraHeight: 480
@@ -37,6 +38,7 @@ MonoBehaviour:
   _gestures:
     VelocityWindow: 0.3
     ConfirmFrames: 2
+    ConfirmWindow: 0.1
     JumpWristHeight: 0
     JumpMinVelocity: 1.5
     RollWristDropBelowElbows: 0.4
@@ -61,6 +63,7 @@ MonoBehaviour:
     CameraWarmup: 6
     ValidFramesToTrack: 3
     LostTimeout: 0.7
+    InvalidResultsToLose: 2
     LostToSearchingTimeout: 3
   _previewWidth: 320
   _previewHeight: 240

@@ -16,12 +16,6 @@ public class BoatAnimator : MonoBehaviour
 
     private Animator _animator;
 
-    public float BackflipChance
-    {
-        get => _backflipChance;
-        set => _backflipChance = Mathf.Clamp01(value);
-    }
-
     private void Awake() => _animator = GetComponent<Animator>();
 
     private void OnEnable()

@@ -23,7 +23,6 @@ public static class UiTheme
     public const float BUTTON_ICON_SIZE = 28f;
     public const float LABEL_SPACING = 6f;
     public const float CAPTION_SPACING = 10f;
-    public const float OUTLINE_PIXELS_PER_UNIT = 1f;
 
     public static Color Alpha(Color color, float alpha)
     {

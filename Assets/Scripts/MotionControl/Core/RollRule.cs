@@ -11,7 +11,7 @@ public class RollRule : IGestureRule
     {
         _thresholds = thresholds;
 
-        if (!history.LatestConsecutive(thresholds.ConfirmFrames, BothWristsBelowElbows)) return false;
+        if (!history.LatestConsecutive(thresholds.ConfirmFrames, thresholds.ConfirmWindow, BothWristsBelowElbows)) return false;
         if (!history.AnyWithin(thresholds.RollReadyLookback, WasInReadyPose)) return false;
 
         float leftVelocity = history.PeakVelocity(KeypointIndex.LEFT_WRIST, thresholds.VelocityWindow, Vector2.down);

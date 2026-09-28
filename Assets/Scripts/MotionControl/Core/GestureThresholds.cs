@@ -5,6 +5,7 @@ public class GestureThresholds
 {
     public float VelocityWindow = 0.3f;
     public int ConfirmFrames = 2;
+    public float ConfirmWindow = 0.1f;
 
     public float JumpWristHeight = 0f;
     public float JumpMinVelocity = 1.5f;

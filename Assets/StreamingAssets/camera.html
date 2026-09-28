@@ -224,7 +224,7 @@ function renderSide(p) {
 
     document.getElementById('person').textContent = p.hasPerson ? (p.personConfidence.toFixed(2) + (p.poseValid ? '' : ' (niepelna)')) : 'brak';
     document.getElementById('fps').textContent = p.poseFps.toFixed(1);
-    document.getElementById('inf').textContent = p.inferenceMs.toFixed(1) + ' ms';
+    document.getElementById('inf').textContent = p.inferenceMs.toFixed(1) + ' ms (' + (p.backend || '?') + ', ' + (p.dispatchFrames || 0) + ' kl.)';
     document.getElementById('armV').className = 'arm' + (p.armedVertical ? ' on' : '');
     document.getElementById('armH').className = 'arm' + (p.armedHorizontal ? ' on' : '');
 

@@ -52,6 +52,36 @@ public class TrackingStateMachineTests
     }
 
     [Test]
+    public void SlowResults_SingleInvalidResultDoesNotLoseTracking()
+    {
+        var machine = Create();
+        for (int i = 1; i <= 4; i++) machine.Update(i * 0.1f, true, true, true);
+
+        machine.Update(1.3f, true, true, false);
+        Assert.That(machine.State, Is.EqualTo(TrackingState.Tracking));
+
+        machine.Update(2.2f, true, true, true);
+        Assert.That(machine.State, Is.EqualTo(TrackingState.Tracking));
+
+        machine.Update(3.1f, true, true, false);
+        Assert.That(machine.State, Is.EqualTo(TrackingState.Tracking));
+
+        machine.Update(4.0f, true, true, false);
+        Assert.That(machine.State, Is.EqualTo(TrackingState.Lost));
+    }
+
+    [Test]
+    public void FramesWithoutResultsDoNotLoseTracking()
+    {
+        var machine = Create();
+        for (int i = 1; i <= 4; i++) machine.Update(i * 0.1f, true, true, true);
+
+        for (int i = 0; i < 20; i++) machine.Update(0.5f + i * 0.1f, true, false, false);
+
+        Assert.That(machine.State, Is.EqualTo(TrackingState.Tracking));
+    }
+
+    [Test]
     public void FallsBackToNoCameraWithoutFrames()
     {
         var machine = Create();

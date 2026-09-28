@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using Unity.InferenceEngine;
+using Unity.Jobs;
 using UnityEngine;
 
 public class PoseModelRunner : IDisposable
@@ -8,20 +9,30 @@ public class PoseModelRunner : IDisposable
     private readonly Worker _worker;
     private readonly Tensor<float> _input;
     private readonly TextureTransform _transform;
-    private readonly int _layersPerFrame;
+    private readonly DispatchPlanner _planner;
+    private readonly bool _cpuBackend;
 
     private IEnumerator _schedule;
     private Tensor<float> _pendingOutput;
+    private bool _awaitingInput;
     private float _startedAt;
+    private int _dispatchFrames;
 
     public int InputSize { get; }
+    public int LayerCount { get; }
+    public BackendType Backend { get; }
     public float LastInferenceMs { get; private set; }
-    public bool IsIdle => _schedule == null && _pendingOutput == null;
+    public int LastDispatchFrames { get; private set; }
+    public float StartedAt => _startedAt;
+    public bool IsIdle => !_awaitingInput && _schedule == null && _pendingOutput == null;
 
-    public PoseModelRunner(Model model, int inputSize, int layersPerFrame, BackendType backend)
+    public PoseModelRunner(Model model, int inputSize, BackendType backend, DispatchPlanner planner)
     {
         InputSize = inputSize;
-        _layersPerFrame = Mathf.Max(1, layersPerFrame);
+        Backend = backend;
+        LayerCount = model.layers.Count;
+        _planner = planner;
+        _cpuBackend = backend == BackendType.CPU;
 
         _worker = new Worker(model, backend);
         _input = new Tensor<float>(new TensorShape(1, 3, inputSize, inputSize));
@@ -33,29 +44,45 @@ public class PoseModelRunner : IDisposable
         if (!IsIdle) throw new InvalidOperationException("Previous inference has not been consumed yet.");
 
         TextureConverter.ToTensor(input, _input, _transform);
-        _schedule = _worker.ScheduleIterable(_input);
         _startedAt = now;
-    }
+        _dispatchFrames = 0;
 
-    public float StartedAt => _startedAt;
+        if (_cpuBackend)
+        {
+            _input.ReadbackRequest();
+            _awaitingInput = true;
+            return;
+        }
+
+        _schedule = _worker.ScheduleIterable(_input);
+    }
 
     public void Abort()
     {
         _schedule = null;
         _pendingOutput = null;
+        _awaitingInput = false;
     }
 
     public void Step()
     {
+        if (_awaitingInput)
+        {
+            if (!_input.IsReadbackRequestDone()) return;
+
+            _awaitingInput = false;
+            _schedule = _worker.ScheduleIterable(_input);
+        }
+
         if (_schedule == null) return;
 
-        for (int i = 0; i < _layersPerFrame; i++)
+        _dispatchFrames++;
+        int layers = _cpuBackend ? int.MaxValue : _planner.LayersPerFrame(LayerCount);
+        for (int i = 0; i < layers; i++)
         {
             if (_schedule.MoveNext()) continue;
 
-            _schedule = null;
-            _pendingOutput = _worker.PeekOutput() as Tensor<float>;
-            _pendingOutput?.ReadbackRequest();
+            FinishDispatch();
             return;
         }
     }
@@ -77,9 +104,17 @@ public class PoseModelRunner : IDisposable
 
     public void Dispose()
     {
-        _schedule = null;
-        _pendingOutput = null;
+        Abort();
         _input?.Dispose();
         _worker?.Dispose();
+    }
+
+    private void FinishDispatch()
+    {
+        _schedule = null;
+        LastDispatchFrames = _dispatchFrames;
+        _pendingOutput = _worker.PeekOutput() as Tensor<float>;
+        if (_cpuBackend) JobHandle.ScheduleBatchedJobs();
+        _pendingOutput?.ReadbackRequest();
     }
 }

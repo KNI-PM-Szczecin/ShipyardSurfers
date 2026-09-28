@@ -1,5 +1,6 @@
 using System;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 
 public class PoseGestureInputEmitter : IDisposable
 {
@@ -7,8 +8,6 @@ public class PoseGestureInputEmitter : IDisposable
     private PoseGestureDevice _device;
     private float _releaseAt;
     private bool _held;
-
-    public bool IsAttached => _device != null;
 
     public PoseGestureInputEmitter(float holdDuration)
     {
@@ -33,7 +32,7 @@ public class PoseGestureInputEmitter : IDisposable
     {
         if (_device == null) return;
 
-        InputSystem.QueueStateEvent(_device, PoseGestureState.Pressed(BitFor(gesture)));
+        InputState.Change(_device, PoseGestureState.Pressed(BitFor(gesture)));
         _releaseAt = now + _holdDuration;
         _held = true;
     }
@@ -42,7 +41,7 @@ public class PoseGestureInputEmitter : IDisposable
     {
         if (!_held || _device == null || now < _releaseAt) return;
 
-        InputSystem.QueueStateEvent(_device, PoseGestureState.Released);
+        InputState.Change(_device, PoseGestureState.Released);
         _held = false;
     }
 

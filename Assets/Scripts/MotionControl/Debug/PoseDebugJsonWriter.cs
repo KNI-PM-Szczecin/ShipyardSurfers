@@ -22,6 +22,8 @@ public class PoseDebugJsonWriter
         AppendBool("mirror", snapshot.Mirror);
         AppendFloat("poseFps", snapshot.PoseFps);
         AppendFloat("inferenceMs", snapshot.InferenceMs);
+        AppendFloat("dispatchFrames", snapshot.DispatchFrames);
+        AppendString("backend", snapshot.Backend);
         AppendFloat("now", snapshot.Now);
         AppendString("lastGesture", snapshot.LastGesture);
         AppendFloat("lastGestureTime", snapshot.LastGestureTime);

@@ -15,6 +15,8 @@ public class PoseDebugSnapshot
     public bool Mirror;
     public float PoseFps;
     public float InferenceMs;
+    public int DispatchFrames;
+    public string Backend = string.Empty;
     public float Now;
     public string LastGesture = string.Empty;
     public float LastGestureTime = -1f;

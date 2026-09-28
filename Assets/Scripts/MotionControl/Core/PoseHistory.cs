@@ -117,6 +117,28 @@ public class PoseHistory
 
         return true;
     }
+
+    public bool LatestConsecutive(int frames, float window, PosePredicate predicate)
+    {
+        int required = Mathf.Clamp(SamplesWithin(window), 1, Mathf.Max(1, frames));
+        return LatestConsecutive(required, predicate);
+    }
+
+    public int SamplesWithin(float window)
+    {
+        NormalizedPose latest = Latest;
+        if (latest == null) return 0;
+
+        float cutoff = latest.Timestamp - window;
+        int count = 0;
+        for (int age = 0; age < _count; age++)
+        {
+            if (this[age].Timestamp < cutoff) break;
+            count++;
+        }
+
+        return count;
+    }
 }
 
 public delegate bool PosePredicate(NormalizedPose pose);

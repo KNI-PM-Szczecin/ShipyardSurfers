@@ -1,3 +1,4 @@
+using System;
 using Unity.InferenceEngine;
 using UnityEngine;
 
@@ -10,8 +11,11 @@ public class MotionControlConfig : ScriptableObject
     [SerializeField] private ModelAsset _model;
     [SerializeField] private string _modelResourcePath = "MotionControl/yolo26n-pose-320";
     [SerializeField] private int _inputSize = 320;
-    [SerializeField] private int _layersPerFrame = 40;
+    [SerializeField, Tooltip("Wall-clock window the layers of one inference are spread over. Fewer frames fit on a slow machine, so it dispatches the whole model in one frame instead of falling further behind the camera.")]
+    private float _dispatchWindowMs = 30f;
     [SerializeField] private BackendType _backend = BackendType.GPUCompute;
+    [SerializeField, Tooltip("Measures the configured backend against the other device (GPU vs CPU) on the first inferences and keeps the one with the lower pose latency.")]
+    private bool _autoSelectBackend = true;
     [SerializeField, Range(0f, 1f)] private float _minPersonConfidence = 0.5f;
 
     [Header("Camera")]
@@ -39,8 +43,9 @@ public class MotionControlConfig : ScriptableObject
 
     public ModelAsset Model => _model != null ? _model : Resources.Load<ModelAsset>(_modelResourcePath);
     public int InputSize => _inputSize;
-    public int LayersPerFrame => _layersPerFrame;
-    public BackendType Backend => _backend;
+    public float DispatchWindowSeconds => Mathf.Max(0f, _dispatchWindowMs) * 0.001f;
+    public BackendType Backend => Enum.IsDefined(typeof(BackendType), _backend) ? _backend : BackendType.GPUCompute;
+    public bool AutoSelectBackend => _autoSelectBackend;
     public float MinPersonConfidence => _minPersonConfidence;
 
     public int CameraWidth => _cameraWidth;

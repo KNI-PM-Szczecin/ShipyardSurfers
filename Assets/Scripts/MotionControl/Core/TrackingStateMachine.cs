@@ -6,6 +6,7 @@ public class TrackingStateMachine
     private float _warmupUntil = float.NegativeInfinity;
     private float _lostSince;
     private int _consecutiveValid;
+    private int _consecutiveInvalid;
 
     public TrackingState State { get; private set; } = TrackingState.Disabled;
 
@@ -18,6 +19,7 @@ public class TrackingStateMachine
     {
         _lastValidPoseTime = float.NegativeInfinity;
         _consecutiveValid = 0;
+        _consecutiveInvalid = 0;
         State = TrackingState.NoCamera;
         NotifyCameraStarted(now);
     }
@@ -38,12 +40,7 @@ public class TrackingStateMachine
         if (State == TrackingState.Disabled) return;
 
         if (frameArrived) _lastFrameTime = now;
-
-        if (resultArrived)
-        {
-            _consecutiveValid = poseValid ? _consecutiveValid + 1 : 0;
-            if (poseValid) _lastValidPoseTime = now;
-        }
+        if (resultArrived) CountResult(now, poseValid);
 
         if (now >= _warmupUntil && now - _lastFrameTime > _timings.NoCameraTimeout)
         {
@@ -60,7 +57,7 @@ public class TrackingStateMachine
                 if (_consecutiveValid >= _timings.ValidFramesToTrack) State = TrackingState.Tracking;
                 break;
             case TrackingState.Tracking:
-                if (now - _lastValidPoseTime > _timings.LostTimeout)
+                if (IsLost(now))
                 {
                     State = TrackingState.Lost;
                     _lostSince = now;
@@ -71,5 +68,24 @@ public class TrackingStateMachine
                 else if (now - _lostSince > _timings.LostToSearchingTimeout) State = TrackingState.Searching;
                 break;
         }
+    }
+
+    private void CountResult(float now, bool poseValid)
+    {
+        if (poseValid)
+        {
+            _consecutiveValid++;
+            _consecutiveInvalid = 0;
+            _lastValidPoseTime = now;
+            return;
+        }
+
+        _consecutiveValid = 0;
+        _consecutiveInvalid++;
+    }
+
+    private bool IsLost(float now)
+    {
+        return now - _lastValidPoseTime > _timings.LostTimeout && _consecutiveInvalid >= _timings.InvalidResultsToLose;
     }
 }

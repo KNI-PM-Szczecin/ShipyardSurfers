@@ -81,7 +81,7 @@ public class WebcamSource : ICameraSource
 
     public bool TryConsumeFrame()
     {
-        if (!IsRunning || _texture.width <= PLACEHOLDER_SIZE) return false;
+        if (!HasLiveFrame) return false;
 
         int updateCount = (int)_texture.updateCount;
         if (updateCount == _lastUpdateCount) return false;
@@ -89,6 +89,13 @@ public class WebcamSource : ICameraSource
         _lastUpdateCount = updateCount;
         return true;
     }
+
+    public bool HasFrameNewerThan(long frameCount)
+    {
+        return HasLiveFrame && _texture.updateCount > 0 && _texture.updateCount != frameCount;
+    }
+
+    private bool HasLiveFrame => IsRunning && _texture.width > PLACEHOLDER_SIZE;
 
     public void Dispose() => Stop();
 

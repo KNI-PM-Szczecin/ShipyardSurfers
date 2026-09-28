@@ -10,8 +10,6 @@ public class BlockadeFitter : MonoBehaviour
     private BoxCollider[] _depthColliders;
     [SerializeField] private BoxCollider _frontWall;
 
-    public float TileDepth => _tileDepth;
-
     public void Fit(float depth)
     {
         if (depth <= 0f) return;
