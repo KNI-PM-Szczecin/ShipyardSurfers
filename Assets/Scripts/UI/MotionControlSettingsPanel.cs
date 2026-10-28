@@ -7,6 +7,8 @@ public class MotionControlSettingsPanel : MonoBehaviour
 {
     private const string NO_CAMERAS_OPTION = "Brak kamer";
     private const string NO_SERVICE_STATUS = "Sterowanie kamerą niedostępne";
+    private const string KINECT_OPTION = "Kinect (Xbox 360)";
+    private const string KINECT_MISSING_RUNTIME_OPTION = "Kinect (brak Kinect Runtime 1.8)";
 
     [SerializeField] private Toggle _enabledToggle;
     [SerializeField] private TMP_Dropdown _cameraDropdown;
@@ -17,6 +19,7 @@ public class MotionControlSettingsPanel : MonoBehaviour
     private IMotionControlSettings _settings;
     private Observable<TrackingState> _state;
     private string[] _devices = new string[0];
+    private bool _kinectListed;
 
     private void OnEnable()
     {
@@ -48,12 +51,17 @@ public class MotionControlSettingsPanel : MonoBehaviour
     private void Populate()
     {
         _devices = WebcamSource.DeviceNames();
+        _kinectListed = KinectSensorSource.IsSupportedPlatform;
 
-        var options = new List<string>(_devices.Length > 0 ? _devices : new[] { NO_CAMERAS_OPTION });
+        var options = new List<string>(_devices);
+        if (_kinectListed) options.Add(KinectSensorSource.IsRuntimeInstalled ? KINECT_OPTION : KINECT_MISSING_RUNTIME_OPTION);
+        bool hasOptions = options.Count > 0;
+        if (!hasOptions) options.Add(NO_CAMERAS_OPTION);
+
         _cameraDropdown.ClearOptions();
         _cameraDropdown.AddOptions(options);
-        _cameraDropdown.SetValueWithoutNotify(Mathf.Max(0, System.Array.IndexOf(_devices, _settings.CameraName)));
-        _cameraDropdown.interactable = _devices.Length > 0;
+        _cameraDropdown.SetValueWithoutNotify(SelectedIndex());
+        _cameraDropdown.interactable = hasOptions;
 
         _enabledToggle.SetIsOnWithoutNotify(_settings.Enabled);
         _mirrorToggle.SetIsOnWithoutNotify(_settings.MirrorHorizontal);
@@ -78,10 +86,23 @@ public class MotionControlSettingsPanel : MonoBehaviour
         _settings.Enabled = enabled;
     }
 
+    private int SelectedIndex()
+    {
+        if (_kinectListed && _settings.Source == MotionSource.Kinect) return _devices.Length;
+        return Mathf.Max(0, System.Array.IndexOf(_devices, _settings.CameraName));
+    }
+
     private void OnCameraChanged(int index)
     {
+        if (_kinectListed && index == _devices.Length)
+        {
+            _settings.Source = MotionSource.Kinect;
+            return;
+        }
+
         if (index < 0 || index >= _devices.Length) return;
         _settings.CameraName = _devices[index];
+        _settings.Source = MotionSource.Webcam;
     }
 
     private void OnMirrorChanged(bool mirror)
