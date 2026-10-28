@@ -1,0 +1,57 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-Win64-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: Library-Win64-
+
+      - uses: game-ci/unity-builder@v4
+        id: build
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: StandaloneWindows64
+          versioning: Semantic
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ShipyardSurfers-v${{ steps.build.outputs.buildVersion }}-Win64
+          path: build/StandaloneWindows64
+
+      - name: Zip
+        if: github.ref == 'refs/heads/main'
+        run: cd build/StandaloneWindows64 && zip -r ../../ShipyardSurfers-v${{ steps.build.outputs.buildVersion }}-win64.zip .
+
+      - uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v${{ steps.build.outputs.buildVersion }}
+          name: v${{ steps.build.outputs.buildVersion }}
+          prerelease: true
+          generate_release_notes: true
+          files: ShipyardSurfers-*-win64.zip
