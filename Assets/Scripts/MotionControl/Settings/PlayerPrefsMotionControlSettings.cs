@@ -5,6 +5,7 @@ public class PlayerPrefsMotionControlSettings : IMotionControlSettings
 {
     private const string ENABLED_KEY = "MotionControl.Enabled";
     private const string CAMERA_NAME_KEY = "MotionControl.CameraName";
+    private const string SOURCE_KEY = "MotionControl.Source";
     private const string MIRROR_KEY = "MotionControl.MirrorHorizontal";
 
     public event Action Changed;
@@ -13,6 +14,12 @@ public class PlayerPrefsMotionControlSettings : IMotionControlSettings
     {
         get => PlayerPrefs.GetInt(ENABLED_KEY, 0) == 1;
         set => SetInt(ENABLED_KEY, value ? 1 : 0);
+    }
+
+    public MotionSource Source
+    {
+        get => PlayerPrefs.GetInt(SOURCE_KEY, (int)MotionSource.Webcam) == (int)MotionSource.Kinect ? MotionSource.Kinect : MotionSource.Webcam;
+        set => SetInt(SOURCE_KEY, (int)value);
     }
 
     public string CameraName

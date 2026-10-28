@@ -24,14 +24,16 @@ public class MotionControlService : MonoBehaviour
     public IMotionControlSettings Settings { get; private set; }
     public MotionControlConfig Config => _config;
     public bool IsApplyingSettings => _applyRoutine != null;
-    public Texture CameraTexture => _camera != null ? _camera.Texture : null;
-    public bool CameraVerticallyMirrored => _camera != null && _camera.VerticallyMirrored;
+    public MotionSource ActiveSource => _activeSource;
+    public Texture CameraTexture => UsingKinect ? _kinect.Texture : _camera != null ? _camera.Texture : null;
+    public bool CameraVerticallyMirrored => !UsingKinect && _camera != null && _camera.VerticallyMirrored;
     public NormalizedPose Pose => _pose;
     public PoseDebugSnapshot Snapshot => _snapshot;
 
     [SerializeField] private MotionControlConfig _config;
 
     private WebcamSource _camera;
+    private KinectSensorSource _kinect;
     private SquareCropBlitter _cropper;
     private PoseModelRunner _runner;
     private Model _model;
@@ -39,6 +41,7 @@ public class MotionControlService : MonoBehaviour
     private BackendSelector<BackendType> _selector;
     private YoloPoseDecoder _decoder;
     private PoseNormalizer _normalizer;
+    private PoseNormalizer _kinectNormalizer;
     private PoseSmoother _smoother;
     private PoseHistory _history;
     private GestureRecognizer _recognizer;
@@ -52,6 +55,7 @@ public class MotionControlService : MonoBehaviour
 
     private Coroutine _applyRoutine;
     private bool _pipelineActive;
+    private MotionSource _activeSource;
     private int _resultsThisSecond;
     private float _fpsWindowStart;
     private float _poseFps;
@@ -66,6 +70,9 @@ public class MotionControlService : MonoBehaviour
     private bool _selectionLogged;
     private bool _externalDemand;
     private int _frameRateBeforePipeline;
+
+    private bool UsingKinect => _activeSource == MotionSource.Kinect && _kinect != null;
+    private PoseNormalizer ActiveNormalizer => UsingKinect ? _kinectNormalizer : _normalizer;
 
     public bool IsPipelineWanted => (Settings != null && Settings.Enabled) || _externalDemand;
 
@@ -112,7 +119,7 @@ public class MotionControlService : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (!_pipelineActive || !_camera.HasTexture || _camera.IsRunning) return;
+        if (!_pipelineActive || UsingKinect || !_camera.HasTexture || _camera.IsRunning) return;
 
         _camera.Resume();
         OnCameraStarted(Time.unscaledTime);
@@ -127,10 +134,12 @@ public class MotionControlService : MonoBehaviour
     private void BuildPipeline()
     {
         _camera = new WebcamSource(Config.CameraWidth, Config.CameraHeight, Config.CameraFps);
+        _kinect = new KinectSensorSource(Config.KinectSeatedMode, Config.KinectColorMirrored);
         _cropper = new SquareCropBlitter(Config.InputSize);
         _planner = new DispatchPlanner(Config.DispatchWindowSeconds);
         _decoder = new YoloPoseDecoder(Config.MinPersonConfidence);
         _normalizer = new PoseNormalizer(Config.Validity);
+        _kinectNormalizer = new PoseNormalizer(Config.KinectValidity);
         _smoother = new PoseSmoother(Config.Smoothing, KeypointIndex.UpperBody);
         _history = new PoseHistory(HISTORY_CAPACITY);
         _recognizer = new GestureRecognizer(GestureRecognizer.DefaultRules(), Config.Gestures, _history);
@@ -156,7 +165,17 @@ public class MotionControlService : MonoBehaviour
 
         yield return null;
 
-        if (!_pipelineActive)
+        if (_pipelineActive && _activeSource != Settings.Source)
+        {
+            StopPipeline();
+            yield return null;
+        }
+
+        if (!_pipelineActive && Settings.Source == MotionSource.Kinect)
+        {
+            StartPipeline();
+        }
+        else if (!_pipelineActive)
         {
             yield return EnsureRunner();
             if (_runner != null)
@@ -171,7 +190,7 @@ public class MotionControlService : MonoBehaviour
                 StartPipeline();
             }
         }
-        else if (_camera.ActiveDeviceName != Settings.CameraName && !string.IsNullOrEmpty(Settings.CameraName))
+        else if (!UsingKinect && _camera.ActiveDeviceName != Settings.CameraName && !string.IsNullOrEmpty(Settings.CameraName))
         {
             _camera.Stop();
             OnCameraStarted(Time.unscaledTime);
@@ -266,7 +285,9 @@ public class MotionControlService : MonoBehaviour
 
     private void StartPipeline()
     {
-        _camera.Start(Settings.CameraName);
+        _activeSource = Settings.Source;
+        if (UsingKinect) _kinect.Start();
+        else _camera.Start(Settings.CameraName);
         _emitter.Attach();
         _tracking.Enable(Time.unscaledTime);
         _lastInferredFrame = -1;
@@ -280,6 +301,12 @@ public class MotionControlService : MonoBehaviour
         _inferenceTimeouts = 0;
         _nextCameraRestart = Time.unscaledTime + CAMERA_RESTART_INTERVAL;
         State.Value = _tracking.State;
+        if (UsingKinect)
+        {
+            Debug.Log($"{nameof(MotionControlService)}: pipeline started with Kinect v1 skeleton tracking, frame rate capped at {frameRate}", this);
+            return;
+        }
+
         Debug.Log($"{nameof(MotionControlService)}: pipeline started, camera '{_camera.ActiveDeviceName ?? "none"}', " +
                   $"frame rate capped at {frameRate}, backend {_runner.Backend} ({_runner.LayerCount} layers, " +
                   $"dispatch window {Config.DispatchWindowSeconds * 1000f:0} ms, auto-select {Config.AutoSelectBackend})", this);
@@ -296,6 +323,7 @@ public class MotionControlService : MonoBehaviour
         if (!_pipelineActive) return;
 
         _camera.Stop();
+        _kinect.Stop();
         _emitter.Detach();
         _tracking.Disable();
         _runner?.Dispose();
@@ -312,6 +340,7 @@ public class MotionControlService : MonoBehaviour
         _recognizer.Reset();
         _smoother.Reset();
         _normalizer.Reset();
+        _kinectNormalizer.Reset();
     }
 
     private void OnCameraStarted(float now)
@@ -322,31 +351,29 @@ public class MotionControlService : MonoBehaviour
 
     private void Update()
     {
-        if (!_pipelineActive || _runner == null) return;
+        if (!_pipelineActive) return;
 
         float now = Time.unscaledTime;
-        bool frameArrived = _camera.TryConsumeFrame();
-        _planner.ReportFrameTime(Time.unscaledDeltaTime);
+        bool frameArrived;
+        bool resultArrived;
 
-        RecoverStalledInference(now);
-        _runner.Step();
-
-        bool resultArrived = _runner.TryTakeResult(now, out float[] output, out int anchorCount);
-        bool poseValid = false;
-
-        if (resultArrived)
+        if (UsingKinect)
         {
-            _inferenceTimeouts = 0;
-            _lastInferenceMs = _runner.LastInferenceMs;
-            _lastDispatchFrames = _runner.LastDispatchFrames;
-            TrackFps(now);
-            _decoder.TryDecode(output, anchorCount, _runner.InputSize, _runner.InputSize, now, _frame);
-            poseValid = _normalizer.TryNormalize(_frame, _pose);
-            if (poseValid) _smoother.Smooth(_pose);
-            ApplyBackendTrial(_lastInferenceMs);
+            frameArrived = _kinect.Poll(now, _frame, out resultArrived);
+        }
+        else
+        {
+            if (_runner == null) return;
+            frameArrived = StepInference(now, out resultArrived);
         }
 
-        StartInferenceIfReady(now);
+        bool poseValid = false;
+        if (resultArrived)
+        {
+            TrackFps(now);
+            poseValid = ActiveNormalizer.TryNormalize(_frame, _pose);
+            if (poseValid) _smoother.Smooth(_pose);
+        }
 
         TrackingState previous = _tracking.State;
         _tracking.Update(now, frameArrived, resultArrived, poseValid);
@@ -354,7 +381,9 @@ public class MotionControlService : MonoBehaviour
         {
             if (previous == TrackingState.Tracking) ResetRecognition();
             State.Value = _tracking.State;
-            Debug.Log($"{nameof(MotionControlService)}: t={now:0.00} {previous} -> {_tracking.State} (camera running: {_camera.IsRunning}, inference idle: {_runner == null || _runner.IsIdle})", this);
+            Debug.Log(UsingKinect
+                ? $"{nameof(MotionControlService)}: t={now:0.00} {previous} -> {_tracking.State} ({_kinect.Diagnostics})"
+                : $"{nameof(MotionControlService)}: t={now:0.00} {previous} -> {_tracking.State} (camera running: {_camera.IsRunning}, inference idle: {_runner == null || _runner.IsIdle})", this);
         }
 
         RecoverStalledCamera(now);
@@ -371,6 +400,28 @@ public class MotionControlService : MonoBehaviour
         ReportCamera(now);
         if (resultArrived) UpdateSnapshot(poseValid, now);
         PublishDebug(resultArrived, now);
+    }
+
+    private bool StepInference(float now, out bool resultArrived)
+    {
+        bool frameArrived = _camera.TryConsumeFrame();
+        _planner.ReportFrameTime(Time.unscaledDeltaTime);
+
+        RecoverStalledInference(now);
+        _runner.Step();
+
+        resultArrived = _runner.TryTakeResult(now, out float[] output, out int anchorCount);
+        if (resultArrived)
+        {
+            _inferenceTimeouts = 0;
+            _lastInferenceMs = _runner.LastInferenceMs;
+            _lastDispatchFrames = _runner.LastDispatchFrames;
+            _decoder.TryDecode(output, anchorCount, _runner.InputSize, _runner.InputSize, now, _frame);
+            ApplyBackendTrial(_lastInferenceMs);
+        }
+
+        StartInferenceIfReady(now);
+        return frameArrived;
     }
 
     private void StartInferenceIfReady(float now)
@@ -405,13 +456,13 @@ public class MotionControlService : MonoBehaviour
         if (_tracking.State == TrackingState.Tracking || now < _nextCameraReport) return;
 
         _nextCameraReport = now + CAMERA_REPORT_INTERVAL;
-        long frames = _camera.FrameCount;
+        long frames = UsingKinect ? _kinect.FrameCount : _camera.FrameCount;
         bool stalled = frames == _lastReportedFrameCount;
         _lastReportedFrameCount = frames;
         if (!stalled) return;
 
         Debug.LogWarning($"{nameof(MotionControlService)}: t={now:0.00} camera delivered no new frame for {CAMERA_REPORT_INTERVAL:0} s: " +
-                         $"{_camera.Diagnostics}, state {_tracking.State}", this);
+                         $"{(UsingKinect ? _kinect.Diagnostics : _camera.Diagnostics)}, state {_tracking.State}", this);
     }
 
     private void RecoverStalledInference(float now)
@@ -439,6 +490,17 @@ public class MotionControlService : MonoBehaviour
     private void RecoverStalledCamera(float now)
     {
         if (now < _nextCameraRestart || IsApplyingSettings) return;
+
+        if (UsingKinect)
+        {
+            if (_tracking.State != TrackingState.NoCamera || _kinect.IsStarting) return;
+
+            _nextCameraRestart = now + CAMERA_RESTART_INTERVAL;
+            _kinect.Start();
+            OnCameraStarted(now);
+            Debug.LogWarning($"{nameof(MotionControlService)}: no Kinect frames, sensor restarted", this);
+            return;
+        }
 
         if (_camera.HasTexture && !_camera.IsRunning)
         {
@@ -471,7 +533,7 @@ public class MotionControlService : MonoBehaviour
     {
         if (!PoseDebugFeed.HasViewers) return;
 
-        _debugPublisher.PublishFrame(_camera.Texture, _camera.VerticallyMirrored, now);
+        _debugPublisher.PublishFrame(CameraTexture, CameraVerticallyMirrored, now);
         if (!resultArrived && now < _nextDebugHeartbeat) return;
         _nextDebugHeartbeat = now + DEBUG_HEARTBEAT_INTERVAL;
 
@@ -490,16 +552,29 @@ public class MotionControlService : MonoBehaviour
         _snapshot.PoseFps = _poseFps;
         _snapshot.InferenceMs = _lastInferenceMs;
         _snapshot.DispatchFrames = _lastDispatchFrames;
-        _snapshot.Backend = _runner != null ? _runner.Backend.ToString() : "none";
+        _snapshot.Backend = UsingKinect ? "Kinect" : _runner != null ? _runner.Backend.ToString() : "none";
         _snapshot.Now = now;
-        _snapshot.BoundingBox = _frame.HasPerson ? _cropper.ModelToCamera(_frame.BoundingBox) : default;
+        _snapshot.BoundingBox = _frame.HasPerson ? FrameToCamera(_frame.BoundingBox) : default;
 
         for (int i = 0; i < KeypointIndex.COUNT; i++)
         {
             Keypoint keypoint = _frame.Keypoints[i];
-            _snapshot.Keypoints[i] = _frame.HasPerson ? _cropper.ModelToCamera(keypoint.Position) : default;
+            _snapshot.Keypoints[i] = _frame.HasPerson ? FrameToCamera(keypoint.Position) : default;
             _snapshot.Confidences[i] = _frame.HasPerson ? keypoint.Confidence : 0f;
         }
+    }
+
+    private Vector2 FrameToCamera(Vector2 framePixel)
+    {
+        if (!UsingKinect) return _cropper.ModelToCamera(framePixel);
+        return new Vector2(framePixel.x / _frame.ImageWidth, framePixel.y / _frame.ImageHeight);
+    }
+
+    private Rect FrameToCamera(Rect frameRect)
+    {
+        if (!UsingKinect) return _cropper.ModelToCamera(frameRect);
+        return Rect.MinMaxRect(frameRect.xMin / _frame.ImageWidth, frameRect.yMin / _frame.ImageHeight,
+            frameRect.xMax / _frame.ImageWidth, frameRect.yMax / _frame.ImageHeight);
     }
 
     private void OnDestroy()
@@ -510,6 +585,7 @@ public class MotionControlService : MonoBehaviour
         SceneManager.sceneLoaded -= OnSceneLoaded;
         StopPipeline();
         _camera?.Dispose();
+        _kinect?.Dispose();
         _cropper?.Dispose();
         _emitter?.Dispose();
         _debugPublisher?.Dispose();

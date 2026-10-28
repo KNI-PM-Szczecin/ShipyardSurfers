@@ -25,6 +25,14 @@ public class MotionControlConfig : ScriptableObject
     [SerializeField, Tooltip("Lowest Application.targetFrameRate cap while the camera pipeline runs (raised to the display refresh rate when that is higher); an uncapped player starves Media Foundation and the webcam stops delivering frames.")]
     private int _frameRateWhileTracking = 60;
 
+    [Header("Kinect v1")]
+    [SerializeField, Tooltip("Tracks only the upper body (10 joints), for players standing close to the sensor or partly out of frame.")]
+    private bool _kinectSeatedMode;
+    [SerializeField, Tooltip("The Kinect v1 color feed is mirrored; the preview un-mirrors it so it lines up with the skeleton overlay. Turn off if the preview comes out mirrored.")]
+    private bool _kinectColorMirrored = true;
+    [SerializeField, Tooltip("Kinect skeletons are tracked 1-4 m away, so the player's shoulders cover far less of the image than in front of a webcam.")]
+    private PoseValidityThresholds _kinectValidity = new PoseValidityThresholds { MinShoulderWidthFraction = 0.04f };
+
     [Header("Input")]
     [SerializeField] private float _buttonHoldDuration = 0.1f;
 
@@ -52,6 +60,10 @@ public class MotionControlConfig : ScriptableObject
     public int CameraHeight => _cameraHeight;
     public int CameraFps => _cameraFps;
     public int FrameRateWhileTracking => _frameRateWhileTracking;
+
+    public bool KinectSeatedMode => _kinectSeatedMode;
+    public bool KinectColorMirrored => _kinectColorMirrored;
+    public PoseValidityThresholds KinectValidity => _kinectValidity;
 
     public float ButtonHoldDuration => _buttonHoldDuration;
 
